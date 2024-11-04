@@ -1,0 +1,261 @@
+# To improve query performance, we strongly suggest adding indexes to any field that you plan to filter or sort by
+# Add the `@index` or `@index(unique: true)` annotation after any non-key field
+# https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
+
+type Transfer @entity {
+  """
+  id field is always required and must look like this
+  """
+  id: ID!
+  """
+  The block height of the transfer
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the transfer
+  """
+  timestamp: Date!
+  """
+  Amount that is transferred
+  """
+  amount: BigInt!
+  """
+  The account that transfers are made from
+  """
+  from: Account!
+  """
+  The account that transfers are made to
+  """
+  to: Account!
+}
+
+type Account @entity {
+  """
+  id field is always required and must look like this
+  """
+  id: ID!
+  """
+  The public key of this account (same across all Polkadot parachains)
+  """
+  publicKey: Bytes!
+  sentTransfers: [Transfer] @derivedFrom(field: "from")
+  receivedTransfers: [Transfer] @derivedFrom(field: "to")
+  multiOrigin: MultiOrigin
+
+  heartbeats: [Heartbeat!] @derivedFrom(field: "source")
+  attestation: [Attestation!] @derivedFrom(field: "source")
+}
+
+enum MultiOriginKind {
+  Acurast
+  Tezos
+  Ethereum
+  AlephZero
+  Vara
+}
+
+type MultiOrigin @entity {
+  id: ID!
+  originKind: MultiOriginKind!
+  # due to a bug we cannot have indexes on enums
+  originKindString: String! @index
+  origin: Bytes! @index
+  """
+  The linked account in case of originKind==Acurast
+  """
+  account: Account
+
+  allowedAsConsumer: [AdAllowsConsumer!] @derivedFrom(field: "consumer")
+}
+
+type AdAllowsConsumer @entity {
+  id: ID!
+  ad: Advertisement!
+  consumer: MultiOrigin!
+}
+
+type Advertisement @entity {
+  id: ID!
+  source: Account!
+  """
+  The block height of the first encounter
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the first encounter
+  """
+  timestamp: Date!
+
+  schedulingWindowKind: SchedulingWindowKind!
+  schedulingWindowEnd: Date
+  schedulingWindowDelta: BigInt
+  feePerMillisecond: BigInt!
+  feePerStorageByte: BigInt!
+  baseFeePerExecution: BigInt!
+  maxMemory: Int!
+  storageCapacity: Int!
+  allowedConsumers: [AdAllowsConsumer!] @derivedFrom(field: "ad")
+  availableModuleDataEncryption: Boolean!
+  networkRequestQuota: Int!
+
+  remainingStorageCapacity: Int
+
+  deleted: Boolean!
+}
+
+type Heartbeat @entity {
+  id: ID!
+  source: Account!
+  """
+  The block height of the first encounter
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the first encounter
+  """
+  timestamp: Date!
+
+  platform: Int!
+  build_number: Int!
+}
+
+type RemainingStorageCapacity @entity {
+  id: ID!
+  source: Advertisement!
+  timestamp: Date! @index
+  remainingStorageCapacity: Int
+}
+
+type Attestation @entity {
+  id: ID!
+  source: Account!
+  """
+  The block height of the first encounter
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the first encounter
+  """
+  timestamp: Date!
+
+  notBefore: BigInt
+  notAfter: BigInt
+
+  raw: String
+}
+
+enum SchedulingWindowKind {
+  End
+  Delta
+}
+
+type Job @entity {
+  id: ID!
+  # fields building the unique job_id
+  origin: Bytes! @index(unique: true)
+  originKind: MultiOriginKind!
+  # link to Account entity if it's an Acurast address that registered
+  originAccount: Account
+  jobIdSeq: BigInt! @index(unique: true)
+
+  script: Bytes!
+  allowedSources: [String]
+  allowOnlyVerifiedSources: Boolean!
+  memory: Int!
+  networkRequests: Int!
+  storage: Int!
+  requiredModuleDataEncryption: Boolean!
+
+  # schedule
+  duration: BigInt!
+  startTime: Date!
+  endTime: Date!
+  interval: BigInt!
+  maxStartDelay: BigInt!
+
+  # extra.requirements
+  slots: Int!
+  reward: BigInt!
+  minReputation: BigInt
+  assignmentStrategy: AssignmentStrategy!
+  # always null if AssignmentStrategy.Competing
+  instantMatch: [PlannedExecution!] @derivedFrom(field: "job")
+
+  # redundant field for fast filtering by status
+  status: JobStatus!
+  statusChanges: [JobStatusChange!]! @derivedFrom(field: "job")
+
+  assignments: [Assignment!]! @derivedFrom(field: "job")
+}
+
+enum AssignmentStrategy {
+  Single
+  Competing
+}
+
+type JobStatusChange @entity {
+  id: ID!
+  job: Job!
+  """
+  The block height of the status change
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the status change
+  """
+  timestamp: Date!
+  status: JobStatus!
+}
+
+enum JobStatus {
+  Open
+  Matched
+  Assigned
+  Finalized
+  Removed
+}
+
+type Assignment @entity {
+  id: ID!
+  job: Job!
+  source: Advertisement!
+
+  # assignment
+  slot: Int!
+  startDelay: BigInt!
+  feePerExecution: BigInt!
+
+  # schedule
+  actualStartTime: BigInt!
+  actualEndTime: BigInt!
+
+  # SKIPPED IN INDEX FOR NOW:
+  # acknowledged: Boolean!
+  # sla
+  # pubKeys
+}
+
+type AssignmentChange @entity {
+  id: ID!
+  """
+  The block height of the status change
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the status change
+  """
+  timestamp: Date!
+  status: AssignmentStatus!
+}
+
+enum AssignmentStatus {
+  Matched
+  Assigned
+}
+
+type PlannedExecution @entity {
+  id: ID!
+  source: Account!
+  startDelay: BigInt!
+  job: Job!
+}

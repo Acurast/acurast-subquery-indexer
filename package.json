@@ -1,0 +1,37 @@
+{
+  "name": "acurast-subquery-indexer",
+  "version": "0.0.5",
+  "description": "Acurast Indexer powered by Subquery",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "subql codegen && subql build",
+    "start": "subql-node",
+    "query": "dotenv -e .env -- npx @subql/query@2.15.2 --playground -n acurast-subquery-indexer",
+    "codegen": "subql codegen",
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
+    "dev": "subql codegen && subql build && docker-compose pull && docker-compose up --remove-orphans",
+    "prepack": "rm -rf dist && npm run build",
+    "test": "subql build && subql-node test",
+    "build:develop": "NODE_ENV=develop subql codegen && NODE_ENV=develop subql build"
+  },
+  "homepage": "https://github.com/subquery/acurast-canary-subql-starter",
+  "repository": "github:subquery/acurast-canary-subql-starter",
+  "files": [
+    "dist",
+    "schema.graphql",
+    "project.yaml"
+  ],
+  "author": "Papers AG",
+  "license": "MIT",
+  "devDependencies": {
+    "@polkadot/api": "^14.2.2",
+    "@subql/cli": "latest",
+    "@subql/node": "latest",
+    "@subql/testing": "latest",
+    "@subql/types": "latest",
+    "dotenv": "latest",
+    "dotenv-cli": "^7.4.2",
+    "typescript": "^5.2.2"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
