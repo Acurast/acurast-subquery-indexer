@@ -69,14 +69,14 @@ const project: SubstrateProject = {
               module: "balances",
             },
           },*/
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleTransferEvent",
-          //     filter: {
-          //       module: "balances",
-          //       method: "Transfer",
-          //     },
-          //   },
+            {
+              kind: SubstrateHandlerKind.Event,
+              handler: "handleTransferEvent",
+              filter: {
+                module: "balances",
+                method: "Transfer",
+              },
+            },
           {
             kind: SubstrateHandlerKind.Event,
             handler: "handleJobRegistrationStoredEvent",
@@ -93,38 +93,38 @@ const project: SubstrateProject = {
               method: "JobRegistrationRemoved",
             },
           },
-        //   {
-        //     kind: SubstrateHandlerKind.Event,
-        //     handler: "handleAttestationStoredEvent",
-        //     filter: {
-        //       module: "acurast",
-        //       method: "AttestationStored",
-        //     },
-        //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleAdvertisementStoredEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "AdvertisementStored",
-          //     },
-          //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleAdvertisementRemovedEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "handleAdvertisementRemovedEvent",
-          //     },
-          //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "JobRegistrationMatched",
-          //     },
-          //   },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleAttestationStoredEvent",
+            filter: {
+              module: "acurast",
+              method: "AttestationStored",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleAdvertisementStoredEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "AdvertisementStored",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleAdvertisementRemovedEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "handleAdvertisementRemovedEvent",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleJobRegistrationMatchedEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "JobRegistrationMatched",
+            },
+          },
           //   {
           //     kind: SubstrateHandlerKind.Event,
           //     handler: "handleEvent",
@@ -141,14 +141,14 @@ const project: SubstrateProject = {
           //       method: "JobFinalized",
           //     },
           //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleProcessorHeartbeatWithVersionEvent",
-          //     filter: {
-          //       module: "acurastProcessorManager",
-          //       method: "ProcessorHeartbeatWithVersion",
-          //     },
-          //   },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleProcessorHeartbeatWithVersionEvent",
+            filter: {
+              module: "acurastProcessorManager",
+              method: "ProcessorHeartbeatWithVersion",
+            },
+          },
         ],
       },
     },

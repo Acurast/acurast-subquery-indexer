@@ -178,8 +178,7 @@ type Job @entity {
   reward: BigInt!
   minReputation: BigInt
   assignmentStrategy: AssignmentStrategy!
-  # always null if AssignmentStrategy.Competing
-  instantMatch: [PlannedExecution!] @derivedFrom(field: "job")
+  matches: [PlannedExecution!] @derivedFrom(field: "job")
 
   # redundant field for fast filtering by status
   status: JobStatus!
@@ -258,4 +257,13 @@ type PlannedExecution @entity {
   source: Account!
   startDelay: BigInt!
   job: Job!
+  instant: Boolean!
+  """
+  The block height of the status change
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the status change
+  """
+  timestamp: Date!
 }

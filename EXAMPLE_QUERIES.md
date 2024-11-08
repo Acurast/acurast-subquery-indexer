@@ -57,3 +57,29 @@ query {
   }
 }
 ```
+
+
+
+```
+query($jobId: String!)  {
+  job(id: $jobId) {
+      id
+      duration
+      status
+      script
+      allowedSources
+      originKind
+      matches {
+        nodes {
+          id
+          instant
+          blockNumber
+        }
+      }
+  }
+}
+
+{
+  "jobId": "Acurast#5300"
+}
+```

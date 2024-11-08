@@ -7,8 +7,66 @@ import {
   JobStatusChange,
   PlannedExecution,
 } from "../types";
-import { getOrCreateMultiOrigin, jobIdToString } from "../utils";
+import {
+  getOrCreateAccount,
+  getOrCreateMultiOrigin,
+  jobIdToString,
+} from "../utils";
 import { codecToJobId } from "./convert";
+
+export async function handleJobRegistrationMatchedEvent(
+  event: SubstrateEvent
+): Promise<void> {
+  logger.info(
+    `JobRegistrationMatched event found at block ${event.block.block.header.number.toString()}`
+  );
+
+  // Get data from the event
+  logger.info(JSON.stringify(event));
+  const {
+    event: {
+      data: [codec],
+    },
+  } = event;
+
+  const data = codec as any;
+  const jobId = await codecToJobId(data.jobId);
+  const id = jobIdToString(jobId);
+
+  const blockNumber: number = event.block.block.header.number.toNumber();
+
+  let job = await Job.get(id);
+  if (!job) {
+    return;
+  }
+  const plannedExecutions: PlannedExecution[] = data.sources.map(
+    (plannedExecution: any) => {
+      return PlannedExecution.create({
+        id: `${job.id}-${plannedExecution.source}`,
+        sourceId: plannedExecution.source.toString(),
+        startDelay: plannedExecution.startDelay.toBigInt(),
+        jobId: job.id,
+        instant: false,
+        blockNumber,
+        timestamp: event.block.timestamp!,
+      });
+    }
+  );
+  job.status = JobStatus.Matched;
+  const change = JobStatusChange.create({
+    id: `${job.id}-${blockNumber}-${event.idx}`,
+    jobId: job.id,
+    blockNumber,
+    timestamp: event.block.timestamp!,
+    status: job.status,
+  });
+
+  await Promise.all([
+    job.save(),
+    change.save(),
+    ...plannedExecutions.map((e) => e.save()),
+  ]);
+}
 
 export async function handleJobRegistrationStoredEvent(
   event: SubstrateEvent
@@ -33,10 +91,10 @@ export async function handleJobRegistrationStoredEvent(
   const blockNumber: number = event.block.block.header.number.toNumber();
 
   let job = await Job.get(id);
-  let plannedExecutions: PlannedExecution[] = [];
   if (job) {
     return;
   }
+  let plannedExecutions: PlannedExecution[] = [];
   const { assignmentStrategy, instantMatch } = codecToAssignmentStrategy(
     data.extra.requirements.assignmentStrategy
   );
@@ -79,7 +137,7 @@ export async function handleJobRegistrationStoredEvent(
     status: JobStatus.Open,
   });
   const change = JobStatusChange.create({
-    id: `${job!.id}-${blockNumber}-${event.idx}`,
+    id: `${job.id}-${blockNumber}-${event.idx}`,
     jobId: job.id,
     blockNumber,
     timestamp: event.block.timestamp!,
@@ -88,10 +146,13 @@ export async function handleJobRegistrationStoredEvent(
   if (assignmentStrategy == AssignmentStrategy.Single && instantMatch) {
     plannedExecutions = instantMatch.map((plannedExecution) => {
       return PlannedExecution.create({
-        id: `${job!.id}-${plannedExecution.source}`,
+        id: `${job.id}-${plannedExecution.source}`,
         sourceId: plannedExecution.source,
         startDelay: plannedExecution.startDelay,
-        jobId: job!.id,
+        jobId: job.id,
+        instant: true,
+        blockNumber,
+        timestamp: event.block.timestamp!,
       });
     });
   }
@@ -154,7 +215,7 @@ export async function handleJobRegistrationRemovedEvent(
   if (job) {
     job.status = JobStatus.Removed;
     const change = JobStatusChange.create({
-      id: `${job!.id}-${blockNumber}-${event.idx}`,
+      id: `${job.id}-${blockNumber}-${event.idx}`,
       jobId: job.id,
       blockNumber,
       timestamp: event.block.timestamp!,
