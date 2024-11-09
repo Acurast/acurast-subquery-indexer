@@ -4,7 +4,7 @@ import { subqlTest } from "@subql/testing";
 
 subqlTest(
   "handleTransferEvent test", // Test name
-  3148644, // Block height to test at
+  3175761, // Block height to test at
   [], // Dependent entities
   [], // Expected entities
   "handleTransferEvent", // handler name

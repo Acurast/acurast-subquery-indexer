@@ -159,7 +159,7 @@ type Job @entity {
   jobIdSeq: BigInt! @index(unique: true)
 
   script: Bytes!
-  allowedSources: [String]
+  allowedSources: [JobAllowsSource!] @derivedFrom(field: "job")
   allowOnlyVerifiedSources: Boolean!
   memory: Int!
   networkRequests: Int!
@@ -190,6 +190,12 @@ type Job @entity {
 enum AssignmentStrategy {
   Single
   Competing
+}
+
+type JobAllowsSource @entity {
+  id: ID!
+  source: Account!
+  job: Job!
 }
 
 type JobStatusChange @entity {
