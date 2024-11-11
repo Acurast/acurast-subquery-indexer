@@ -1,15 +1,8 @@
-import {
-  SubstrateExtrinsic,
-  SubstrateEvent,
-  SubstrateBlock,
-} from "@subql/types";
-import { Account, MultiOrigin, MultiOriginKind, Transfer } from "./types";
-import { Balance } from "@polkadot/types/interfaces";
-import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
-import { isHex, u8aToHex } from "@polkadot/util";
 import { Codec } from "@polkadot/types-codec/types";
+import { u8aToHex } from "@polkadot/util";
+import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
 import { JobId, MultiOriginProps } from "./mappings/convert";
-import { Prefix } from "@polkadot/util-crypto/types";
+import { Account, MultiOrigin, MultiOriginKind } from "./types";
 
 export async function getOrCreateAccount(
   address: Codec | string

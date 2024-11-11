@@ -1,16 +1,13 @@
 import { Balance } from "@polkadot/types/interfaces";
-import {
-    SubstrateEvent
-} from "@subql/types";
+import { SubstrateEvent } from "@subql/types";
 import { Transfer } from "../types";
 import { getOrCreateAccount } from "../utils";
+import { logAndStats } from "./common";
 
 export async function handleTransferEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `Transfer event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   // The balances.transfer event has the following payload \[from, to, value\]

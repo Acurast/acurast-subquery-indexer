@@ -15,13 +15,12 @@ import {
   jobIdToString,
 } from "../utils";
 import { codecToJobId } from "./convert";
+import { logAndStats } from "./common";
 
 export async function handleJobRegistrationMatchedEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `JobRegistrationMatched event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
@@ -73,9 +72,7 @@ export async function handleJobRegistrationMatchedEvent(
 export async function handleJobRegistrationStoredEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `JobRegistrationStored event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
@@ -191,9 +188,7 @@ export async function handleJobRegistrationStoredEvent(
 export async function handleAllowedSourcesUpdatedEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `handleAllowedSourcesUpdatedEvent event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
@@ -272,9 +267,7 @@ export type PlannedExecutionProps = {
 export async function handleJobRegistrationRemovedEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `JobRegistrationRemoved event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));

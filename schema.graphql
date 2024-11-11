@@ -2,6 +2,33 @@
 # Add the `@index` or `@index(unique: true)` annotation after any non-key field
 # https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
 
+type Stats @entity {
+  """
+  ID corresponding ot event name
+  """
+  id: ID!
+  """
+  Number of events encountered in indexed blocks
+  """
+  number: Int!
+  """
+  The block height of the first encounter
+  """
+  firstBlockNumber: Int!
+  """
+  The timestamp of the first encounter
+  """
+  firstTimestamp: Date!
+  """
+  The block height of the last encounter
+  """
+  lastBlockNumber: Int!
+  """
+  The timestamp of the last encounter
+  """
+  lastTimestamp: Date!
+}
+
 type Transfer @entity {
   """
   id field is always required and must look like this

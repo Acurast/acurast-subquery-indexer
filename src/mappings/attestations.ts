@@ -1,13 +1,12 @@
 import { SubstrateEvent } from "@subql/types";
 import { Attestation } from "../types";
 import { getOrCreateAccount } from "../utils";
+import { logAndStats } from "./common";
 
 export async function handleAttestationStoredEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `AttestationStored event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   // logger.info(JSON.stringify(event));

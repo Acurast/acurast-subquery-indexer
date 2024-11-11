@@ -1,20 +1,13 @@
-import {
-    SubstrateEvent
-} from "@subql/types";
-import {
-    Advertisement,
-    Heartbeat,
-    SchedulingWindowKind
-} from "../types";
+import { SubstrateEvent } from "@subql/types";
+import { Advertisement, Heartbeat, SchedulingWindowKind } from "../types";
 import { AdvertisementProps } from "../types/models/Advertisement";
 import { getOrCreateAccount } from "../utils";
+import { logAndStats } from "./common";
 
 export async function handleAdvertisementStoredEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `AdvertisementStored event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
@@ -93,9 +86,7 @@ function codecToSchedulingWindow(data: any): {
 export async function handleAdvertisementRemovedEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `AdvertisementRemoved event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
@@ -119,9 +110,7 @@ export async function handleAdvertisementRemovedEvent(
 export async function handleProcessorHeartbeatWithVersionEvent(
   event: SubstrateEvent
 ): Promise<void> {
-  logger.info(
-    `ProcessorHeartbeatWithVersionEvent event found at block ${event.block.block.header.number.toString()}`
-  );
+  await logAndStats(event);
 
   // Get data from the event
   logger.info(JSON.stringify(event));
