@@ -145,6 +145,8 @@ export async function handleJobRegistrationStoredEvent(
       const id = `${job.id}-${sourceAddress}`;
       // the runtime makes sure we do not save duplicates but still returns all updates (with potential duplicates) so we check for existence
       if (!(await JobAllowsSource.get(id))) {
+        // only push if JobAllowsSource did not yet exist
+        sources.push(sourceAccount);
         allowedSources.push(
           JobAllowsSource.create({
             id: `${job.id}-${sourceAddress}`,
@@ -152,7 +154,6 @@ export async function handleJobRegistrationStoredEvent(
             sourceId: sourceAccount.id,
           })
         );
-        sources.push(sourceAccount);
       }
     }
   }
@@ -198,110 +199,47 @@ export async function handleAllowedSourcesUpdatedEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [jobRegistrationCodec, jobIdCodec],
+      data: [jobIdCodec, _, updatesCodec],
     },
   } = event;
 
   const jobId = await codecToJobId(jobIdCodec);
   const id = jobIdToString(jobId);
-  const account = await getOrCreateMultiOrigin(jobId[0]);
-
-  const data = jobRegistrationCodec as any;
-  const blockNumber: number = event.block.block.header.number.toNumber();
 
   let job = await Job.get(id);
-  if (job) {
+  if (!job) {
     return;
   }
-  let plannedExecutions: PlannedExecution[] = [];
-  const { assignmentStrategy, instantMatch } = codecToAssignmentStrategy(
-    data.extra.requirements.assignmentStrategy
-  );
-  job = Job.create({
-    id,
-    origin: jobId[0].origin,
-    originKind: jobId[0].originKind,
-    originAccountId: account.id,
-    jobIdSeq: jobId[1],
 
-    script: data.script.toHex(),
-    allowOnlyVerifiedSources: data.allowOnlyVerifiedSources.toJSON(),
-    memory: data.memory.toNumber(),
-    networkRequests: data.networkRequests.toNumber(),
-    storage: data.storage.toNumber(),
-    requiredModuleDataEncryption:
-      !!data.requiredModules.find(
-        (module: any) => module.__kind === "DataEncryption"
-      ) || false,
-
-    // schedule
-    duration: data.schedule.duration.toBigInt(),
-    startTime: new Date(data.schedule.startTime.toNumber()),
-    endTime: new Date(data.schedule.endTime.toNumber()),
-    interval: data.schedule.interval.toBigInt(),
-    maxStartDelay: data.schedule.maxStartDelay.toBigInt(),
-
-    //  extra.requirements
-    slots: data.extra.requirements.slots.toNumber(),
-    reward: data.extra.requirements.reward.toBigInt(),
-    minReputation: data.extra.requirements.minReputation
-      .unwrapOr(undefined)
-      ?.toBigInt(),
-
-    assignmentStrategy,
-
-    status: JobStatus.Open,
-  });
-
-  const allowedSources: JobAllowsSource[] = [];
-  const sources: Account[] = [];
-  await data.allowedSources
-    .unwrapOr(undefined)
-    ?.map(async (allowedSource: any) => {
-      const sourceAddress = allowedSource.toString();
+  const promises: Promise<any>[] = [];
+  for (const u of updatesCodec as any) {
+    // get the ss58 address of the source
+    const sourceAddress = u.item.toString();
+    const id = `${job.id}-${sourceAddress}`;
+    if (u.operation.isAdd) {
       const sourceAccount = await getOrCreateAccount(sourceAddress);
-      const id = `${job.id}-${sourceAddress}`;
       // the runtime makes sure we do not save duplicates but still returns all updates (with potential duplicates) so we check for existence
       if (!(await JobAllowsSource.get(id))) {
-        allowedSources.push(
+        // only push if JobAllowsSource did not yet exist
+        promises.push(sourceAccount.save());
+        promises.push(
           JobAllowsSource.create({
             id: `${job.id}-${sourceAddress}`,
             jobId: job.id,
             sourceId: sourceAccount.id,
-          })
+          }).save()
         );
-        sources.push(sourceAccount);
       }
-    });
-  const change = JobStatusChange.create({
-    id: `${job.id}-${blockNumber}-${event.idx}`,
-    jobId: job.id,
-    blockNumber,
-    timestamp: event.block.timestamp!,
-    status: job.status,
-  });
-  if (assignmentStrategy == AssignmentStrategy.Single && instantMatch) {
-    plannedExecutions = instantMatch.map((plannedExecution) => {
-      return PlannedExecution.create({
-        id: `${job.id}-${plannedExecution.source}`,
-        sourceId: plannedExecution.source,
-        startDelay: plannedExecution.startDelay,
-        jobId: job.id,
-        instant: true,
-        blockNumber,
-        timestamp: event.block.timestamp!,
-      });
-    });
+    } else if (u.operation.isRemove) {
+      promises.push(JobAllowsSource.remove(id));
+    } else {
+      throw new Error(
+        `unsupported ListUpdateOperation variant in ListUpdate: ${u.toString()}`
+      );
+    }
   }
 
-  await Promise.all([
-    job.save(),
-    account.save(),
-    change.save(),
-    ...plannedExecutions.map((e) => e.save()),
-    ...sources.map((s) => s.save()),
-    ...allowedSources.map((s) => s.save()),
-  ]);
+  await Promise.all(promises);
 }
 
 function codecToAssignmentStrategy(codec: Codec): {

@@ -87,6 +87,14 @@ const project: SubstrateProject = {
           },
           {
             kind: SubstrateHandlerKind.Event,
+            handler: "handleAllowedSourcesUpdatedEvent",
+            filter: {
+              module: "acurast",
+              method: "AllowedSourcesUpdated",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
             handler: "handleJobRegistrationRemovedEvent",
             filter: {
               module: "acurast",
