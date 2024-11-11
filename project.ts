@@ -47,11 +47,12 @@ const project: SubstrateProject = {
      * These settings can be found in your docker-compose.yaml, they will slow indexing but prevent your project being rate limited
      */
     endpoint: process.env.ENDPOINT!?.split(",") as string[] | string,
+    dictionary: "https://api.subquery.network/sq/subquery/dictionary-polkadot",
   },
   dataSources: [
     {
       kind: SubstrateDatasourceKind.Runtime,
-      startBlock: 3149916,
+      startBlock: 3155257,
       mapping: {
         file: "./dist/index.js",
         handlers: [
@@ -69,14 +70,14 @@ const project: SubstrateProject = {
               module: "balances",
             },
           },*/
-            {
-              kind: SubstrateHandlerKind.Event,
-              handler: "handleTransferEvent",
-              filter: {
-                module: "balances",
-                method: "Transfer",
-              },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleTransferEvent",
+            filter: {
+              module: "balances",
+              method: "Transfer",
             },
+          },
           {
             kind: SubstrateHandlerKind.Event,
             handler: "handleJobRegistrationStoredEvent",
