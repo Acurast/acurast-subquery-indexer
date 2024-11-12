@@ -4,7 +4,7 @@
 
 type Stats @entity {
   """
-  ID corresponding ot event name
+  ID corresponding to event section.method
   """
   id: ID!
   """
@@ -127,7 +127,7 @@ type Advertisement @entity {
 
   remainingStorageCapacity: Int
 
-  deleted: Boolean!
+  removed: Boolean!
 }
 
 type Heartbeat @entity {

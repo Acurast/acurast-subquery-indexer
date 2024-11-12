@@ -43,7 +43,7 @@ export async function handleAdvertisementStoredEvent(
         (module: any) => module.__variant === "DataEncryption"
       ) || false,
     networkRequestQuota: data.networkRequestQuota.toNumber(),
-    deleted: false,
+    removed: false,
   };
 
   // update or create with prepared props
@@ -98,7 +98,7 @@ export async function handleAdvertisementRemovedEvent(
 
   let advertisement = await Advertisement.get(source.toHex());
   if (advertisement) {
-    advertisement.deleted = true;
+    advertisement.removed = true;
     await advertisement?.save();
   } else {
     logger.warn(

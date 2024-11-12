@@ -10,6 +10,8 @@ import {
   JobStatusChange,
   Match,
   PubKeys,
+  Report,
+  ReportVariant,
 } from "../types";
 import {
   getOrCreateAccount,
@@ -18,6 +20,7 @@ import {
 } from "../utils";
 import { codecToJobAssignment, codecToJobId, PubKey } from "./convert";
 import { logAndStats } from "./common";
+import { TextDecoder } from "util";
 
 export async function handleMatchedEvents(
   event: SubstrateEvent
@@ -100,9 +103,11 @@ export async function handleJobRegistrationAssignedEvent(
   const assignment = codecToJobAssignment(assignmentCodec);
   const sourceId = sourceCodec.toString();
   const blockNumber: number = event.block.block.header.number.toNumber();
+  const timestamp = event.block.timestamp!;
+
   const id = assignment.execution
-    ? `${job.id}-${sourceId}`
-    : `${job.id}-${sourceId}-${assignment.execution}`;
+    ? `${job.id}-${sourceId}-${assignment.execution}`
+    : `${job.id}-${sourceId}`;
   const assignmentEntity = Assignment.create({
     // since it's a one-to-one relation
     id,
@@ -111,18 +116,80 @@ export async function handleJobRegistrationAssignedEvent(
     sla: assignment.sla,
     pubKeys: pubKeyToPubKeyEntity(assignment.pubKeys),
     blockNumber,
-    timestamp: event.block.timestamp!,
+    timestamp,
   });
   job.status = JobStatus.Assigned;
   const change = JobStatusChange.create({
     id: `${job.id}-${blockNumber}-${event.idx}`,
     jobId: job.id,
     blockNumber,
-    timestamp: event.block.timestamp!,
+    timestamp,
     status: job.status,
   });
 
   await Promise.all([job.save(), change.save(), assignmentEntity.save()]);
+}
+
+export async function handleReportedEvent(
+  event: SubstrateEvent
+): Promise<void> {
+  await logAndStats(event);
+
+  // Get data from the event
+  logger.info(JSON.stringify(event));
+  const {
+    event: {
+      data: [jobIdCodec, sourceCodec, assignmentCodec],
+    },
+  } = event;
+
+  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
+
+  let job = await Job.get(jobId);
+  if (!job) {
+    return;
+  }
+
+  const assignment = codecToJobAssignment(assignmentCodec);
+  const sourceId = sourceCodec.toString();
+  const blockNumber: number = event.block.block.header.number.toNumber();
+  const timestamp = event.block.timestamp!;
+  const id = assignment.execution
+    ? `${job.id}-${sourceId}-${assignment.execution}`
+    : `${job.id}-${sourceId}`;
+
+  // retrieve execution result over extrinsic
+  logger.info(JSON.stringify(event.extrinsic!.extrinsic.method.toHuman()));
+  const [_exJobIdCodec, exExecutionResultCodec] =
+    event.extrinsic!.extrinsic.method.args;
+
+  const executionResult = exExecutionResultCodec as any;
+  let report: Report | undefined;
+  if (executionResult.isSuccess) {
+    report = Report.create({
+      id,
+      assignmentId: id,
+      blockNumber,
+      timestamp,
+      variant: ReportVariant.Success,
+      operationHash: executionResult.asSuccess.toHex(),
+    });
+  } else if (executionResult.isFailure) {
+    report = Report.create({
+      id,
+      assignmentId: id,
+      blockNumber,
+      timestamp,
+      variant: ReportVariant.Failure,
+      errorMessage: new TextDecoder().decode(executionResult.asFailure.toU8a()),
+    });
+  } else {
+    throw new Error(
+      `unsupported ExecutionResult variant: ${executionResult.toString()}`
+    );
+  }
+
+  await Promise.all([report.save()]);
 }
 
 function pubKeyToPubKeyEntity(pubKeys: PubKey[]) {

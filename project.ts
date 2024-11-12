@@ -150,14 +150,14 @@ const project: SubstrateProject = {
               method: "JobRegistrationAssigned",
             },
           },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleReportedEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "Reported",
-          //     },
-          //   },
+            {
+              kind: SubstrateHandlerKind.Event,
+              handler: "handleReportedEvent",
+              filter: {
+                module: "acurastMarketplace",
+                method: "Reported",
+              },
+            },
           //   {
           //     kind: SubstrateHandlerKind.Event,
           //     handler: "handleExecutionSuccessEvent",

@@ -33,3 +33,11 @@ subqlTest(
   [], // Expected entities
   "handleJobFinalizedEvent" // handler name
 );
+
+subqlTest(
+  "handleReportedEvent", // Test name
+  3155278, // Block height to test at
+  [], // Dependent entities
+  [], // Expected entities
+  "handleReportedEvent" // handler name
+);
