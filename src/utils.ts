@@ -2,7 +2,7 @@ import { Codec } from "@polkadot/types-codec/types";
 import { u8aToHex } from "@polkadot/util";
 import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
 import { JobId, MultiOriginProps } from "./mappings/convert";
-import { Account, MultiOrigin, MultiOriginKind } from "./types";
+import { Account, MultiOrigin, MultiOriginVariant } from "./types";
 
 export async function getOrCreateAccount(
   address: Codec | string
@@ -22,11 +22,11 @@ export async function getOrCreateAccount(
 export async function getOrCreateMultiOrigin(
   props: MultiOriginProps
 ): Promise<MultiOrigin> {
-  let { originKind, origin } = props;
+  let { originVariant, origin } = props;
   let multiOrigin = (
     await MultiOrigin.getByFields(
       [
-        ["originKindString", "=", originKind.toString()],
+        ["originVariantString", "=", originVariant.toString()],
         ["origin", "=", origin],
       ],
       {
@@ -36,8 +36,8 @@ export async function getOrCreateMultiOrigin(
   ).at(0);
   if (!multiOrigin) {
     // We couldn't find the account
-    switch (originKind) {
-      case MultiOriginKind.Acurast:
+    switch (originVariant) {
+      case MultiOriginVariant.Acurast:
         const address = encodeAddress(origin, 42);
 
         const account = await getOrCreateAccount(address);
@@ -45,35 +45,35 @@ export async function getOrCreateMultiOrigin(
 
         multiOrigin = MultiOrigin.create({
           // use the account address here for faster filtering on related entities
-          id: multiOriginPrefix(originKind, address),
-          originKind,
-          originKindString: originKind.toString(),
+          id: multiOriginPrefix(originVariant, address),
+          originVariant,
+          originVariantString: originVariant.toString(),
           origin,
           // only Acurast MultiOrigins get automatically linked to their native account
           accountId: account.id,
         });
         break;
-      case MultiOriginKind.AlephZero:
+      case MultiOriginVariant.AlephZero:
         multiOrigin = MultiOrigin.create({
-          id: multiOriginPrefix(originKind, encodeAddress(origin, 42)),
-          originKind,
-          originKindString: originKind.toString(),
+          id: multiOriginPrefix(originVariant, encodeAddress(origin, 42)),
+          originVariant,
+          originVariantString: originVariant.toString(),
           origin,
         });
         break;
-      case MultiOriginKind.Vara:
+      case MultiOriginVariant.Vara:
         multiOrigin = MultiOrigin.create({
-          id: multiOriginPrefix(originKind, encodeAddress(origin, 137)),
-          originKind,
-          originKindString: originKind.toString(),
+          id: multiOriginPrefix(originVariant, encodeAddress(origin, 137)),
+          originVariant,
+          originVariantString: originVariant.toString(),
           origin,
         });
         break;
       default:
         multiOrigin = MultiOrigin.create({
-          id: multiOriginPrefix(originKind, origin),
-          originKind,
-          originKindString: originKind.toString(),
+          id: multiOriginPrefix(originVariant, origin),
+          originVariant,
+          originVariantString: originVariant.toString(),
           origin,
         });
         break;
@@ -83,22 +83,22 @@ export async function getOrCreateMultiOrigin(
 }
 
 export function jobIdToString(jobId: JobId): string {
-  return multiOriginPrefix(jobId[0].originKind, jobId[1].toString());
+  return multiOriginPrefix(jobId[0].originVariant, jobId[1].toString());
 }
 
-export function multiOriginPrefix(kind: MultiOriginKind, text: string): string {
-  switch (kind) {
-    case MultiOriginKind.Acurast:
+export function multiOriginPrefix(variant: MultiOriginVariant, text: string): string {
+  switch (variant) {
+    case MultiOriginVariant.Acurast:
       return `Acurast#${text}`;
-    case MultiOriginKind.Tezos:
+    case MultiOriginVariant.Tezos:
       return `Tezos#${text}`;
-    case MultiOriginKind.Ethereum:
+    case MultiOriginVariant.Ethereum:
       return `Ethereum#${text}`;
-    case MultiOriginKind.AlephZero:
+    case MultiOriginVariant.AlephZero:
       return `AlephZero#${text}`;
-    case MultiOriginKind.Vara:
+    case MultiOriginVariant.Vara:
       return `Vara#${text}`;
     default:
-      throw Error(`Unknown JobId variant: ${kind}`);
+      throw Error(`Unknown JobId variant: ${variant}`);
   }
 }

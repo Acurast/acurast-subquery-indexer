@@ -1,5 +1,5 @@
 import { SubstrateEvent } from "@subql/types";
-import { Advertisement, Heartbeat, SchedulingWindowKind } from "../types";
+import { Advertisement, Heartbeat, SchedulingWindowVariant } from "../types";
 import { AdvertisementProps } from "../types/models/Advertisement";
 import { getOrCreateAccount } from "../utils";
 import { logAndStats } from "./common";
@@ -40,7 +40,7 @@ export async function handleAdvertisementStoredEvent(
     storageCapacity: data.storageCapacity.toNumber(),
     availableModuleDataEncryption:
       !!data.availableModules.find(
-        (module: any) => module.__kind === "DataEncryption"
+        (module: any) => module.__variant === "DataEncryption"
       ) || false,
     networkRequestQuota: data.networkRequestQuota.toNumber(),
     deleted: false,
@@ -62,18 +62,18 @@ export async function handleAdvertisementStoredEvent(
 }
 
 function codecToSchedulingWindow(data: any): {
-  schedulingWindowKind: SchedulingWindowKind;
+  schedulingWindowVariant: SchedulingWindowVariant;
   schedulingWindowEnd?: Date;
   schedulingWindowDelta?: bigint;
 } {
   if (data.isDelta) {
     return {
-      schedulingWindowKind: SchedulingWindowKind.Delta,
+      schedulingWindowVariant: SchedulingWindowVariant.Delta,
       schedulingWindowDelta: data.asDelta.toBigInt(),
     };
   } else if (data.isEnd) {
     return {
-      schedulingWindowKind: SchedulingWindowKind.End,
+      schedulingWindowVariant: SchedulingWindowVariant.End,
       schedulingWindowEnd: new Date(data.asEnd.toNumber()),
     };
   } else {

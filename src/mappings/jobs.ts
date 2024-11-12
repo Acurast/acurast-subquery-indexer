@@ -2,22 +2,24 @@ import { Codec } from "@polkadot/types-codec/types";
 import { SubstrateEvent } from "@subql/types";
 import {
   Account,
+  Assignment,
   AssignmentStrategy,
   Job,
   JobAllowsSource,
   JobStatus,
   JobStatusChange,
-  PlannedExecution,
+  Match,
+  PubKeys,
 } from "../types";
 import {
   getOrCreateAccount,
   getOrCreateMultiOrigin,
   jobIdToString,
 } from "../utils";
-import { codecToJobId } from "./convert";
+import { codecToJobAssignment, codecToJobId, PubKey } from "./convert";
 import { logAndStats } from "./common";
 
-export async function handleJobRegistrationMatchedEvent(
+export async function handleMatchedEvents(
   event: SubstrateEvent
 ): Promise<void> {
   await logAndStats(event);
@@ -40,19 +42,25 @@ export async function handleJobRegistrationMatchedEvent(
   if (!job) {
     return;
   }
-  const plannedExecutions: PlannedExecution[] = data.sources.map(
-    (plannedExecution: any) => {
-      return PlannedExecution.create({
-        id: `${job.id}-${plannedExecution.source}`,
-        sourceId: plannedExecution.source.toString(),
-        startDelay: plannedExecution.startDelay.toBigInt(),
-        jobId: job.id,
-        instant: false,
-        blockNumber,
-        timestamp: event.block.timestamp!,
-      });
-    }
-  );
+  const matchs: Match[] = data.sources.map((match: any, index: number) => {
+    // since this event is might be a match for all executions, execution can be undefined
+    const execution: number | undefined = data.hasOwnProperty("executionIndex")
+      ? data.executionIndex.toNumber()
+      : undefined;
+    return Match.create({
+      id: execution
+        ? `${job.id}-${match.source}`
+        : `${job.id}-${match.source}-${execution}`,
+      sourceId: match.source.toString(),
+      jobId: job.id,
+      slot: index,
+      execution,
+      startDelay: match.startDelay.toBigInt(),
+      instant: false,
+      blockNumber,
+      timestamp: event.block.timestamp!,
+    });
+  });
   job.status = JobStatus.Matched;
   const change = JobStatusChange.create({
     id: `${job.id}-${blockNumber}-${event.idx}`,
@@ -65,8 +73,74 @@ export async function handleJobRegistrationMatchedEvent(
   await Promise.all([
     job.save(),
     change.save(),
-    ...plannedExecutions.map((e) => e.save()),
+    ...matchs.map((e) => e.save()),
   ]);
+}
+
+export async function handleJobRegistrationAssignedEvent(
+  event: SubstrateEvent
+): Promise<void> {
+  await logAndStats(event);
+
+  // Get data from the event
+  logger.info(JSON.stringify(event));
+  const {
+    event: {
+      data: [jobIdCodec, sourceCodec, assignmentCodec],
+    },
+  } = event;
+
+  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
+
+  let job = await Job.get(jobId);
+  if (!job) {
+    return;
+  }
+
+  const assignment = codecToJobAssignment(assignmentCodec);
+  const sourceId = sourceCodec.toString();
+  const blockNumber: number = event.block.block.header.number.toNumber();
+  const id = assignment.execution
+    ? `${job.id}-${sourceId}`
+    : `${job.id}-${sourceId}-${assignment.execution}`;
+  const assignmentEntity = Assignment.create({
+    // since it's a one-to-one relation
+    id,
+    matchId: id,
+    feePerExecution: assignment.feePerExecution,
+    sla: assignment.sla,
+    pubKeys: pubKeyToPubKeyEntity(assignment.pubKeys),
+    blockNumber,
+    timestamp: event.block.timestamp!,
+  });
+  job.status = JobStatus.Assigned;
+  const change = JobStatusChange.create({
+    id: `${job.id}-${blockNumber}-${event.idx}`,
+    jobId: job.id,
+    blockNumber,
+    timestamp: event.block.timestamp!,
+    status: job.status,
+  });
+
+  await Promise.all([job.save(), change.save(), assignmentEntity.save()]);
+}
+
+function pubKeyToPubKeyEntity(pubKeys: PubKey[]) {
+  const pubKeysEntity: PubKeys = {};
+  for (const p of pubKeys) {
+    if (p.ED25519) {
+      pubKeysEntity.ED25519 = p.ED25519;
+    } else if (p.SECP256k1) {
+      pubKeysEntity.SECP256k1 = p.SECP256k1;
+    } else if (p.SECP256r1) {
+      pubKeysEntity.SECP256r1 = p.SECP256r1;
+    } else if (p.SECP256k1Encryption) {
+      pubKeysEntity.SECP256k1Encryption = p.SECP256k1Encryption;
+    } else if (p.SECP256r1Encryption) {
+      pubKeysEntity.SECP256r1Encryption = p.SECP256r1Encryption;
+    }
+  }
+  return pubKeysEntity;
 }
 
 export async function handleJobRegistrationStoredEvent(
@@ -93,14 +167,14 @@ export async function handleJobRegistrationStoredEvent(
   if (job) {
     return;
   }
-  let plannedExecutions: PlannedExecution[] = [];
+  let matchs: Match[] = [];
   const { assignmentStrategy, instantMatch } = codecToAssignmentStrategy(
     data.extra.requirements.assignmentStrategy
   );
   job = Job.create({
     id,
     origin: jobId[0].origin,
-    originKind: jobId[0].originKind,
+    originVariant: jobId[0].originVariant,
     originAccountId: account.id,
     jobIdSeq: jobId[1],
 
@@ -162,12 +236,14 @@ export async function handleJobRegistrationStoredEvent(
     status: job.status,
   });
   if (assignmentStrategy == AssignmentStrategy.Single && instantMatch) {
-    plannedExecutions = instantMatch.map((plannedExecution) => {
-      return PlannedExecution.create({
-        id: `${job.id}-${plannedExecution.source}`,
-        sourceId: plannedExecution.source,
-        startDelay: plannedExecution.startDelay,
+    matchs = instantMatch.map((match, index: number) => {
+      return Match.create({
+        id: `${job.id}-${match.source}`,
+        sourceId: match.source,
         jobId: job.id,
+        slot: index,
+        execution: undefined, // since this event is matching all executions
+        startDelay: match.startDelay,
         instant: true,
         blockNumber,
         timestamp: event.block.timestamp!,
@@ -179,7 +255,7 @@ export async function handleJobRegistrationStoredEvent(
     job.save(),
     account.save(),
     change.save(),
-    ...plannedExecutions.map((e) => e.save()),
+    ...matchs.map((e) => e.save()),
     ...sources.map((s) => s.save()),
     ...allowedSources.map((s) => s.save()),
   ]);
@@ -239,7 +315,7 @@ export async function handleAllowedSourcesUpdatedEvent(
 
 function codecToAssignmentStrategy(codec: Codec): {
   assignmentStrategy: AssignmentStrategy;
-  instantMatch?: PlannedExecutionProps[];
+  instantMatch?: MatchProps[];
 } {
   const data = codec as any;
   if (data.isSingle) {
@@ -259,7 +335,7 @@ function codecToAssignmentStrategy(codec: Codec): {
   );
 }
 
-export type PlannedExecutionProps = {
+export type MatchProps = {
   source: string;
   startDelay: bigint;
 };

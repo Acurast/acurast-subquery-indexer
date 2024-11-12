@@ -52,7 +52,7 @@ const project: SubstrateProject = {
   dataSources: [
     {
       kind: SubstrateDatasourceKind.Runtime,
-      startBlock: 3155257,
+      startBlock: 3155257, //3156856
       mapping: {
         file: "./dist/index.js",
         handlers: [
@@ -128,23 +128,55 @@ const project: SubstrateProject = {
           },
           {
             kind: SubstrateHandlerKind.Event,
-            handler: "handleJobRegistrationMatchedEvent",
+            handler: "handleMatchedEvents",
             filter: {
               module: "acurastMarketplace",
               method: "JobRegistrationMatched",
             },
           },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleMatchedEvents",
+            filter: {
+              module: "acurastMarketplace",
+              method: "JobExecutionMatched",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleJobRegistrationAssignedEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "JobRegistrationAssigned",
+            },
+          },
           //   {
           //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleEvent",
+          //     handler: "handleReportedEvent",
           //     filter: {
           //       module: "acurastMarketplace",
-          //       method: "JobRegistrationAssigned",
+          //       method: "Reported",
           //     },
           //   },
           //   {
           //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleEvent",
+          //     handler: "handleExecutionSuccessEvent",
+          //     filter: {
+          //       module: "acurastMarketplace",
+          //       method: "ExecutionSuccess",
+          //     },
+          //   },
+          //   {
+          //     kind: SubstrateHandlerKind.Event,
+          //     handler: "handleExecutionFailureEvent",
+          //     filter: {
+          //       module: "acurastMarketplace",
+          //       method: "ExecutionFailure",
+          //     },
+          //   },
+          //   {
+          //     kind: SubstrateHandlerKind.Event,
+          //     handler: "handleJobFinalizedEvent",
           //     filter: {
           //       module: "acurastMarketplace",
           //       method: "JobFinalized",

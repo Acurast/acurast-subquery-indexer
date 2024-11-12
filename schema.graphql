@@ -65,15 +65,15 @@ type Account @entity {
   The public key of this account (same across all Polkadot parachains)
   """
   publicKey: Bytes!
-  sentTransfers: [Transfer] @derivedFrom(field: "from")
-  receivedTransfers: [Transfer] @derivedFrom(field: "to")
+  sentTransfers: [Transfer!]! @derivedFrom(field: "from")
+  receivedTransfers: [Transfer!]! @derivedFrom(field: "to")
   multiOrigin: MultiOrigin
 
-  heartbeats: [Heartbeat!] @derivedFrom(field: "source")
-  attestation: [Attestation!] @derivedFrom(field: "source")
+  heartbeats: [Heartbeat!]! @derivedFrom(field: "source")
+  attestation: [Attestation!]! @derivedFrom(field: "source")
 }
 
-enum MultiOriginKind {
+enum MultiOriginVariant {
   Acurast
   Tezos
   Ethereum
@@ -83,12 +83,12 @@ enum MultiOriginKind {
 
 type MultiOrigin @entity {
   id: ID!
-  originKind: MultiOriginKind!
+  originVariant: MultiOriginVariant!
   # due to a bug we cannot have indexes on enums
-  originKindString: String! @index
+  originVariantString: String! @index
   origin: Bytes! @index
   """
-  The linked account in case of originKind==Acurast
+  The linked account in case of originVariant==Acurast
   """
   account: Account
 
@@ -113,7 +113,7 @@ type Advertisement @entity {
   """
   timestamp: Date!
 
-  schedulingWindowKind: SchedulingWindowKind!
+  schedulingWindowVariant: SchedulingWindowVariant!
   schedulingWindowEnd: Date
   schedulingWindowDelta: BigInt
   feePerMillisecond: BigInt!
@@ -171,7 +171,7 @@ type Attestation @entity {
   raw: String
 }
 
-enum SchedulingWindowKind {
+enum SchedulingWindowVariant {
   End
   Delta
 }
@@ -180,7 +180,7 @@ type Job @entity {
   id: ID!
   # fields building the unique job_id
   origin: Bytes! @index(unique: true)
-  originKind: MultiOriginKind!
+  originVariant: MultiOriginVariant!
   # link to Account entity if it's an Acurast address that registered
   originAccount: Account
   jobIdSeq: BigInt! @index(unique: true)
@@ -205,13 +205,12 @@ type Job @entity {
   reward: BigInt!
   minReputation: BigInt
   assignmentStrategy: AssignmentStrategy!
-  matches: [PlannedExecution!] @derivedFrom(field: "job")
+
+  matches: [Match!]! @derivedFrom(field: "job")
 
   # redundant field for fast filtering by status
   status: JobStatus!
   statusChanges: [JobStatusChange!]! @derivedFrom(field: "job")
-
-  assignments: [Assignment!]! @derivedFrom(field: "job")
 }
 
 enum AssignmentStrategy {
@@ -249,54 +248,81 @@ enum JobStatus {
 
 type Assignment @entity {
   id: ID!
-  job: Job!
-  source: Advertisement!
+  match: Match!
 
-  # assignment
-  slot: Int!
-  startDelay: BigInt!
   feePerExecution: BigInt!
 
-  # schedule
-  actualStartTime: BigInt!
-  actualEndTime: BigInt!
+  sla: SLA!
+  pubKeys: PubKeys!
 
-  # SKIPPED IN INDEX FOR NOW:
-  # acknowledged: Boolean!
-  # sla
-  # pubKeys
-}
-
-type AssignmentChange @entity {
-  id: ID!
   """
-  The block height of the status change
+  The block height of the assignment (match acknowledgment)
   """
   blockNumber: Int! @index
   """
-  The timestamp of the status change
+  The timestamp of the assignment (match acknowledgment)
   """
   timestamp: Date!
-  status: AssignmentStatus!
+
+  reports: [Report!]! @derivedFrom(field: "assignment")
 }
 
-enum AssignmentStatus {
-  Matched
-  Assigned
-}
-
-type PlannedExecution @entity {
+type Match @entity {
   id: ID!
   source: Account!
-  startDelay: BigInt!
   job: Job!
+
+  slot: Int!
+  """
+  The execution assigned. Null means all of them. (reflects sum type used in runtime)
+
+  This field is sourced from two different events: JobRegistrationMatched and JobExecutionMatched
+  """
+  execution: Int @index
+  startDelay: BigInt!
   instant: Boolean!
   """
-  The block height of the status change
+  The block height of the match; can be identical to job.blockNumber for instant matches
   """
   blockNumber: Int! @index
   """
-  The timestamp of the status change
+  The timestamp of the match; can be identical to job.timestamp for instant matches
   """
   timestamp: Date!
+
+  assignments: [Assignment!]! @derivedFrom(field: "match")
+}
+
+type SLA @jsonField {
+  total: Int!
+  met: Int!
+}
+
+type PubKeys @jsonField {
+  SECP256r1: String
+  SECP256k1: String
+  ED25519: String
+  SECP256r1Encryption: String
+  SECP256k1Encryption: String
+}
+
+type Report @entity {
+  id: ID!
+  assignment: Assignment!
+  """
+  The block height of the report
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the report
+  """
+  timestamp: Date!
+  variant: ReportVariant!
+  operationHash: String
+  errorMessage: String
+}
+
+enum ReportVariant {
+  Success
+  Failure
 }

@@ -17,3 +17,19 @@ subqlTest(
   [], // Expected entities
   "handleJobRegistrationStoredEvent" // handler name
 );
+
+subqlTest(
+  "handleJobRegistrationAssignedEvent", // Test name
+  3155263, // Block height to test at
+  [], // Dependent entities
+  [], // Expected entities
+  "handleJobRegistrationAssignedEvent" // handler name
+);
+
+subqlTest(
+  "handleJobFinalizedEvent", // Test name
+  3155346, // Block height to test at
+  [], // Dependent entities
+  [], // Expected entities
+  "handleJobFinalizedEvent" // handler name
+);
