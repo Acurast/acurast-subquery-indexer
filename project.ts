@@ -150,14 +150,15 @@ const project: SubstrateProject = {
               method: "JobRegistrationAssigned",
             },
           },
-            {
-              kind: SubstrateHandlerKind.Event,
-              handler: "handleReportedEvent",
-              filter: {
-                module: "acurastMarketplace",
-                method: "Reported",
-              },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleReportedEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "Reported",
             },
+          },
+          // this events are currently not processed since we derive execution result from extrinsic actual parameters upon a `acurastMarketplace.Reported` event
           //   {
           //     kind: SubstrateHandlerKind.Event,
           //     handler: "handleExecutionSuccessEvent",
@@ -174,14 +175,14 @@ const project: SubstrateProject = {
           //       method: "ExecutionFailure",
           //     },
           //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleJobFinalizedEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "JobFinalized",
-          //     },
-          //   },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleJobFinalizedEvent",
+            filter: {
+              module: "acurastMarketplace",
+              method: "JobFinalized",
+            },
+          },
           {
             kind: SubstrateHandlerKind.Event,
             handler: "handleProcessorHeartbeatWithVersionEvent",

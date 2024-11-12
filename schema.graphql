@@ -242,7 +242,6 @@ enum JobStatus {
   Open
   Matched
   Assigned
-  Finalized
   Removed
 }
 
@@ -265,6 +264,7 @@ type Assignment @entity {
   timestamp: Date!
 
   reports: [Report!]! @derivedFrom(field: "assignment")
+  finalizations: [Finalization!]! @derivedFrom(field: "assignment")
 }
 
 type Match @entity {
@@ -325,4 +325,17 @@ type Report @entity {
 enum ReportVariant {
   Success
   Failure
+}
+
+type Finalization @entity {
+  id: ID!
+  assignment: Assignment!
+  """
+  The block height of the report
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the report
+  """
+  timestamp: Date!
 }

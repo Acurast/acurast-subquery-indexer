@@ -83,3 +83,39 @@ query($jobId: String!)  {
   "jobId": "Acurast#5300"
 }
 ```
+
+
+## Filter finalized jobs
+
+```
+query  {
+  jobs(filter: {matchesExist:true, matches: {every: {assignmentsExist:true, assignments: {every: {finalizationsExist: true}}}}}) {
+    nodes {
+      id
+      status
+      statusChanges {
+        nodes {
+          status
+          blockNumber
+        }
+      }
+      matches {
+        nodes {
+          assignments {
+            nodes {
+              id
+              pubKeys
+              finalizations {
+                nodes {
+                  id
+                  blockNumber
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```

@@ -4,6 +4,7 @@ import {
   Account,
   Assignment,
   AssignmentStrategy,
+  Finalization,
   Job,
   JobAllowsSource,
   JobStatus,
@@ -51,6 +52,7 @@ export async function handleMatchedEvents(
       ? data.executionIndex.toNumber()
       : undefined;
     return Match.create({
+      // the slot is not needed in id since a processor gets only matched to one slot of a job
       id: execution
         ? `${job.id}-${match.source}`
         : `${job.id}-${match.source}-${execution}`,
@@ -164,32 +166,88 @@ export async function handleReportedEvent(
     event.extrinsic!.extrinsic.method.args;
 
   const executionResult = exExecutionResultCodec as any;
-  let report: Report | undefined;
   if (executionResult.isSuccess) {
-    report = Report.create({
+    await Report.create({
       id,
       assignmentId: id,
       blockNumber,
       timestamp,
       variant: ReportVariant.Success,
       operationHash: executionResult.asSuccess.toHex(),
-    });
+    }).save();
   } else if (executionResult.isFailure) {
-    report = Report.create({
+    await Report.create({
       id,
       assignmentId: id,
       blockNumber,
       timestamp,
       variant: ReportVariant.Failure,
       errorMessage: new TextDecoder().decode(executionResult.asFailure.toU8a()),
-    });
+    }).save();
   } else {
     throw new Error(
       `unsupported ExecutionResult variant: ${executionResult.toString()}`
     );
   }
+}
 
-  await Promise.all([report.save()]);
+export async function handleJobFinalizedEvent(
+  event: SubstrateEvent
+): Promise<void> {
+  await logAndStats(event);
+
+  // Get data from the event
+  logger.info(JSON.stringify(event));
+  const {
+    event: {
+      data: [jobIdCodec],
+    },
+  } = event;
+
+  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
+
+  let job = await Job.get(jobId);
+  if (!job) {
+    return;
+  }
+
+  const blockNumber: number = event.block.block.header.number.toNumber();
+  const timestamp = event.block.timestamp!;
+
+  // retrieve execution origin over extrinsic
+  const sourceId = event.extrinsic!.extrinsic.signer.toString();
+  logger.info(event.extrinsic!.extrinsic.signer.toString());
+  logger.info(JSON.stringify(event.extrinsic!.extrinsic.signer.toJSON()));
+
+  const matchId = `${job.id}-${sourceId}`;
+  const match = await Match.get(matchId);
+  if (!match) {
+    return;
+  }
+
+  // get latest assignment
+  // TODO: improve since this is sensitive to order of block indexed and only correct if sequential (breaks e.g. if chunks of blocks are reindexed)
+  const assignment = (
+    await Assignment.getByFields([["matchId", "=", matchId]], {
+      limit: 1,
+      orderBy: "blockNumber",
+      orderDirection: "DESC",
+    })
+  ).at(0);
+  if (!assignment) {
+    return;
+  }
+
+  const id = match.execution
+    ? `${job.id}-${sourceId}-${match.execution}`
+    : `${job.id}-${sourceId}`;
+
+  await Finalization.create({
+    id,
+    assignmentId: assignment.id,
+    blockNumber,
+    timestamp,
+  }).save();
 }
 
 function pubKeyToPubKeyEntity(pubKeys: PubKey[]) {
