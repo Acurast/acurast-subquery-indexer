@@ -69,6 +69,13 @@ type Account @entity {
   receivedTransfers: [Transfer!]! @derivedFrom(field: "to")
   multiOrigin: MultiOrigin
 
+  """
+  If this account is a processor he can have a manager paired
+
+  It relates to `Manager` but indirectly to an account since `Manager` and `Account` have one-to-one relationship.
+  """
+  manager: Manager
+
   heartbeats: [Heartbeat!]! @derivedFrom(field: "source")
   attestation: [Attestation!]! @derivedFrom(field: "source")
 }
@@ -336,6 +343,27 @@ type Finalization @entity {
   blockNumber: Int! @index
   """
   The timestamp of the report
+  """
+  timestamp: Date!
+}
+
+type Manager @entity {
+  id: ID!
+  """
+  One-to-one relation, nullable on account so that all of this type's fields are mandatory if a manager was created for account.
+  """
+  account: Account!
+  managedProcessors: [Account!]! @derivedFrom(field: "manager")
+  managerId: BigInt!
+
+  processors: [Account!]! @derivedFrom(field: "manager")
+
+  """
+  The block height when the manager was created
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp when the manager was created
   """
   timestamp: Date!
 }

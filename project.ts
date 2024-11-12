@@ -52,7 +52,7 @@ const project: SubstrateProject = {
   dataSources: [
     {
       kind: SubstrateDatasourceKind.Runtime,
-      startBlock: 3155257, //3156856
+      startBlock: 1872996,
       mapping: {
         file: "./dist/index.js",
         handlers: [
@@ -197,6 +197,30 @@ const project: SubstrateProject = {
             filter: {
               module: "acurastProcessorManager",
               method: "ProcessorHeartbeatWithVersion",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleManagerCreatedEvent",
+            filter: {
+              module: "acurastProcessorManager",
+              method: "ManagerCreated",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleProcessorPairedEvent",
+            filter: {
+              module: "acurastProcessorManager",
+              method: "ProcessorPaired",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleProcessorPairingsUpdatedEvent",
+            filter: {
+              module: "acurastProcessorManager",
+              method: "ProcessorPairingsUpdated",
             },
           },
         ],
