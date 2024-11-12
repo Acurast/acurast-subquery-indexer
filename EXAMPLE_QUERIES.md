@@ -2,7 +2,7 @@
 
 ### Stats over processed events
 
-```
+```graphql
 query {
   stats {
     nodes {
@@ -13,47 +13,64 @@ query {
 }
 ```
 
+### Heartbeats per block
+
+```graphql
+query {
+  heartbeats {
+    groupedAggregates(groupBy: BLOCK_NUMBER) {
+      keys
+      distinctCount {
+        id
+      }
+    }
+  }
+}
+```
+
+### Assignments and their fee per execution over time
+
+```graphql
+query {
+  assignments {
+    nodes {
+      id
+      feePerExecution
+      match {
+        jobId
+        sourceId
+      }
+      timestamp
+      blockNumber
+    }
+  }
+}
+```
+
 ### L2-jobs
 
 ```graphql
-query($filter: JobFilter)  {
-  jobs(filter: $filter) {
+query {
+  jobs(filter: {originVariant: {notEqualTo: Acurast}}) {
     nodes {
       id
       duration
       status
       script
-      allowedSources
-      originKind
-      instantMatch {
-
-        nodes {
-          id
-        }
-      }
+      originVariant
     }
   }
 }
-
-{
-  "filter": {"originKind": {"notEqualTo": "Acurast"}}
-}
 ```
 
+### Specific job with instantMatch and its matched processor's heartbeats with build_number
 
-## Specific job with instantMatch and those matched processor's heartbeats 
-
-```
+```graphql
 query {
-  job(id: "Acurast#5322") {
-    
+  job(id: "Acurast#1202") {
       id
-      duration
       status
-      script
-      allowedSources
-      originKind
-      instantMatch {
+      matches {
         nodes {
           id
           source {
@@ -71,36 +88,9 @@ query {
 }
 ```
 
+### Filter finalized jobs
 
-
-```
-query($jobId: String!)  {
-  job(id: $jobId) {
-      id
-      duration
-      status
-      script
-      allowedSources
-      originKind
-      matches {
-        nodes {
-          id
-          instant
-          blockNumber
-        }
-      }
-  }
-}
-
-{
-  "jobId": "Acurast#5300"
-}
-```
-
-
-## Filter finalized jobs
-
-```
+```graphql
 query  {
   jobs(filter: {matchesExist:true, matches: {every: {assignmentsExist:true, assignments: {every: {finalizationsExist: true}}}}}) {
     nodes {

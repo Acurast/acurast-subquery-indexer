@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explorer
+  labels:
+    app: explorer
+spec:
+  selector:
+    matchLabels:
+      app: explorer
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: explorer
+    spec:
+      containers:
+        - name: explorer
+          image: subquerynetwork/subql-query:v2.15.2
+          args: ["--playground", "--subscription", "-n", "public"]
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: explorer-config-map
+            - secretRef:
+                name: explorer-secret
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              # TODO improve with '{"query": "{\n  stats {\n    nodes {\n      id\n      number\n      lastBlockNumber\n    }\n  }\n}\n"}'
+              path: /?query=%7B__typename%7D
+              port: 3000
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /?query=%7B__typename%7D
+              port: 3000
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "0.01"
+              memory: 350M
+            limits:
+              cpu: "0.5"
+              memory: 500M
+      restartPolicy: Always
+status: {}

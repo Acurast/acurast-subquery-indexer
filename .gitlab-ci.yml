@@ -1,0 +1,123 @@
+include:
+  - project: "papers/acurast/acurast-infra"
+    file: "/.base-gitlab-ci.yml"
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-publish-dev@v0.0.40
+    inputs:
+      existing-tag: $GOOGLE_TAG-development
+      tag-to-publish: $GOOGLE_TAG_DEV-development
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-publish-prod@v0.0.40
+    inputs:
+      existing-tag: $GOOGLE_TAG-production
+      tag-to-publish: $GOOGLE_TAG-production
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy-dev@v0.0.40
+    inputs:
+      extends_script: .deploy-dev
+      environment: development
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy-prod@v0.0.40
+    inputs:
+      extends_script: .deploy-prod
+      environment: production
+
+variables:
+  TEST_TAG: $CI_PROJECT_NAME:test_$CI_COMMIT_SHA
+  NAMESPACE: acurast-indexer
+
+stages:
+  - build
+  - publish
+  - deploy
+  - provision
+  - drop
+
+.base_build:
+  script:
+    - docker build --build-arg RUN_ENV=$CI_ENVIRONMENT_NAME -t $GOOGLE_TAG-$CI_ENVIRONMENT_NAME .
+
+build-dev:
+  stage: build
+  script:
+    - !reference [.base_build, script]
+  environment:
+    name: development
+    action: prepare
+
+build-prod:
+  stage: build
+  script:
+    - !reference [.base_build, script]
+  environment:
+    name: production
+    action: prepare
+
+.base_deployment:
+  script:
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__PROJECT_NAME__|"$CI_PROJECT_NAME"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG-$CI_ENVIRONMENT_NAME"|g" {} +
+
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__ENDPOINT__|"$ENDPOINT"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__CHAIN_ID__|"$CHAIN_ID"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_ADMIN_USER__|"$POSTGRES_ADMIN_USER"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_ADMIN_PASSWORD__|"$POSTGRES_ADMIN_PASSWORD"|g" {} +
+
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__GRAFANA_ADMIN_USER__|"$POSTGRES_ADMIN_USER"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__GRAFANA_ADMIN_PASSWORD__|"$POSTGRES_ADMIN_PASSWORD"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__GRAFANA_SERVER_ROOT_URL__|"$GRAFANA_SERVER_ROOT_URL"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__POSTGRES_HOST__|"$POSTGRES_HOST"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__GRAFANA_DB_USER__|"$GRAFANA_DB_USER"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__GRAFANA_DB_PASSWORD__|"$GRAFANA_DB_PASSWORD"|g" {} +
+
+    - kubectl apply -k k8s/$CI_ENVIRONMENT_NAME/
+
+.deploy-dev:
+  extends: .base_deployment
+  variables:
+    IMAGE_TAG: $GOOGLE_TAG_DEV
+    ENDPOINT: wss://canarynet-ws-1.acurast-h-server-2.papers.tech
+    CHAIN_ID: 0xce7681fb12aa8f7265d229a9074be0ea1d5e99b53eedcec2deade43857901808
+    POSTGRES_HOST: postgres.$NAMESPACE:5432
+    GRAFANA_SERVER_ROOT_URL: https://acurast-grafana.dev.gke.acurast.com
+  environment:
+    name: development
+
+.deploy-prod:
+  extends: .base_deployment
+  variables:
+    IMAGE_TAG: $GOOGLE_TAG
+    ENDPOINT: wss://canarynet-ws-1.acurast-h-server-2.papers.tech
+    CHAIN_ID: 0xce7681fb12aa8f7265d229a9074be0ea1d5e99b53eedcec2deade43857901808
+    POSTGRES_HOST: postgres.$NAMESPACE:5432
+    GRAFANA_SERVER_ROOT_URL: https://acurast-grafana.prod.gke.acurast.com
+  environment:
+    name: production
+
+provision-db-development:
+  stage: provision
+  extends: .provision_dev_db
+  variables:
+    DB_NAME: $DB_NAME
+    DB_USER: $POSTGRES_ADMIN_USER
+    DB_PASSWORD: $POSTGRES_ADMIN_PASSWORD
+
+drop-db-development:
+  stage: provision
+  extends: .drop_dev_db
+  variables:
+    DB_NAME: $DB_NAME
+    DB_USER: $POSTGRES_ADMIN_USER
+    DB_PASSWORD: $POSTGRES_ADMIN_PASSWORD
+
+provision-db-production:
+  stage: provision
+  extends: .provision_prod_db
+  variables:
+    DB_NAME: $DB_NAME
+    DB_USER: $POSTGRES_ADMIN_USER
+    DB_PASSWORD: $POSTGRES_ADMIN_PASSWORD
+
+# .base-provision-db:
+#   script:
+#     - kubectl --namespace $NAMESPACE exec deployment/postgres -- sh -c "export PGPASSWORD=$POSTGRES_ADMIN_PASSWORD && psql --host=localhost --username=$POSTGRES_ADMIN_USER postgres -c \"CREATE DATABASE acurast-canary\""  || true
+#     - kubectl --namespace $NAMESPACE exec deployment/postgres -- sh -c "export PGPASSWORD=$POSTGRES_ADMIN_PASSWORD && psql --host=localhost --username=$POSTGRES_ADMIN_USER postgres -d acurast-canary -c \"CREATE USER $GRAFANA_DB_USER WITH ENCRYPTED PASSWORD '$GRAFANA_DB_PASSWORD'\"" || true
+#     - kubectl --namespace $NAMESPACE exec deployment/postgres -- sh -c "export PGPASSWORD=$POSTGRES_ADMIN_PASSWORD && psql --host=localhost --username=$POSTGRES_ADMIN_USER postgres -d acurast-canary -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO $GRAFANA_DB_USER\"" || true
+#     - kubectl --namespace $NAMESPACE exec deployment/postgres -- sh -c "export PGPASSWORD=$POSTGRES_ADMIN_PASSWORD && psql --host=localhost --username=$POSTGRES_ADMIN_USER postgres -c \"GRANT SELECT ON ALL TABLES IN SCHEMA public TO $GRAFANA_DB_USER\"" || true

@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "subql codegen && subql build",
-    "start": "subql-node",
-    "query": "dotenv -e .env -- npx @subql/query@2.15.2 --playground -n acurast-subquery-indexer",
+    "start": "subql-node --db-schema=public",
+    "start:local": "dotenv -e .env -- subql-node --db-schema=public",
+    "explorer:local": "dotenv -e .env -- npx @subql/query@2.15.2 --playground --subscription -n public",
     "codegen": "subql codegen",
     "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
     "dev": "subql codegen && subql build && docker-compose pull && docker-compose up --remove-orphans",
@@ -23,13 +24,15 @@
   ],
   "author": "Papers AG",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "@polkadot/api": "^14.2.2",
-    "@subql/cli": "latest",
     "@subql/node": "latest",
+    "dotenv": "latest"
+  },
+  "devDependencies": {
+    "@subql/cli": "latest",
     "@subql/testing": "latest",
     "@subql/types": "latest",
-    "dotenv": "latest",
     "dotenv-cli": "^7.4.2",
     "typescript": "^5.2.2"
   },

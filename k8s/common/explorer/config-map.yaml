@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: explorer-config-map
+data:
+  ENDPOINT: "__ENDPOINT__"
+  CHAIN_ID: "__CHAIN_ID__"
+  DB_USER: "__POSTGRES_ADMIN_USER__"
+  DB_PASS: "__POSTGRES_ADMIN_PASSWORD__"
+  DB_HOST: "postgres.__NAMESPACE_NAME__"
+  DB_DATABASE: "acurast-canary"

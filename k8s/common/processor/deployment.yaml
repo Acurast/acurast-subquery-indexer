@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: processor
+  labels:
+    app: processor
+spec:
+  selector:
+    matchLabels:
+      app: processor
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: processor
+    spec:
+      containers:
+        - name: processor
+          image: __TO_BE_REPLACED_BY_IMAGE_TAG__
+          command: ["yarn", "start"]
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: processor-config-map
+            - secretRef:
+                name: processor-secret
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 3000
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 3000
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "0.2"
+              memory: 300M
+            limits:
+              cpu: "1"
+              memory: 1000M
+      imagePullSecrets:
+        - name: regsecret
+      restartPolicy: Always
+status: {}

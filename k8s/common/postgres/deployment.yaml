@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "__POSTGRES_ADMIN_USER__"
+            - name: POSTGRES_DB
+              value: "acurast-canary"
+            - name: POSTGRES_PASSWORD
+              value: "__POSTGRES_ADMIN_PASSWORD__"
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-pv
+              subPath: "pg_data"
+          resources:
+            requests:
+              cpu: "0.01"
+              memory: 200M
+            limits:
+              cpu: "0.8"
+              memory: 1000M
+
+      volumes:
+        - name: postgres-pv
+          persistentVolumeClaim:
+            claimName: postgres-pv-claim

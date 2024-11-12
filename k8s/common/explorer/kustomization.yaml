@@ -1,0 +1,7 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+resources:
+  - config-map.yaml
+  - secret.yaml
+  - deployment.yaml
+  - service.yaml

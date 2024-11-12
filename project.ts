@@ -20,7 +20,7 @@ dotenv.config({ path: dotenvPath });
 const project: SubstrateProject = {
   specVersion: "1.0.0",
   version: "0.0.1",
-  name: "acurast-canary-starter",
+  name: "acurast-subquery-indexer",
   description: "Acurast Indexer powered by Subquery",
   runner: {
     node: {
@@ -47,7 +47,7 @@ const project: SubstrateProject = {
      * These settings can be found in your docker-compose.yaml, they will slow indexing but prevent your project being rate limited
      */
     endpoint: process.env.ENDPOINT!?.split(",") as string[] | string,
-    dictionary: "https://api.subquery.network/sq/subquery/dictionary-polkadot",
+    // dictionary: "https://api.subquery.network/sq/subquery/dictionary-polkadot",
   },
   dataSources: [
     {
