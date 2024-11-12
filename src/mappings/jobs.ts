@@ -263,6 +263,10 @@ function pubKeyToPubKeyEntity(pubKeys: PubKey[]) {
       pubKeysEntity.SECP256k1Encryption = p.SECP256k1Encryption;
     } else if (p.SECP256r1Encryption) {
       pubKeysEntity.SECP256r1Encryption = p.SECP256r1Encryption;
+    } else {
+      throw new Error(
+        `expected at least on key type to be set in ${JSON.stringify(p)}`
+      );
     }
   }
   return pubKeysEntity;

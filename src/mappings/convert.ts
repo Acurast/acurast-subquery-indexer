@@ -82,15 +82,13 @@ export function codecToJobAssignment(codec: Codec): JobAssignment {
       total: data.sla.total.toNumber(),
       met: data.sla.met.toNumber(),
     },
-    pubKeys: data.pubKeys.map((value: any) => ({
-      SECP256r1: value.secp256r1?.toHex(),
-      SECP256k1: value.secp256k1?.toHex(),
-      ED25519: value.ed25519?.toHex(),
-      SECP256r1Encryption: value.secp256r1Encryption?.toHex(),
-      SECP256k1Encryption: value.secp256k1Encryption?.toHex(),
+    pubKeys: data.pubKeys.toJSON().map((value: any) => ({
+      SECP256r1: value.secp256r1,
+      SECP256k1: value.secp256k1,
+      ED25519: value.ed25519,
+      SECP256r1Encryption: value.secp256r1Encryption,
+      SECP256k1Encryption: value.secp256k1Encryption,
     })),
-    execution: data.execution.isAll
-      ? null
-      : data.execution.asIndex.toNumber(),
+    execution: data.execution.isAll ? null : data.execution.asIndex.toNumber(),
   };
 }
