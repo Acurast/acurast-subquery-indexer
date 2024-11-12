@@ -1,5 +1,18 @@
 # Example queries
 
+### Stats over processed events
+
+```
+query {
+  stats {
+    nodes {
+      id
+      number
+    }
+  }
+}
+```
+
 ### L2-jobs
 
 ```graphql

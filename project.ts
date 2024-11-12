@@ -185,6 +185,14 @@ const project: SubstrateProject = {
           },
           {
             kind: SubstrateHandlerKind.Event,
+            handler: "handleProcessorAdvertisementEvent",
+            filter: {
+              module: "acurastProcessorManager",
+              method: "ProcessorAdvertisement",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
             handler: "handleProcessorHeartbeatWithVersionEvent",
             filter: {
               module: "acurastProcessorManager",

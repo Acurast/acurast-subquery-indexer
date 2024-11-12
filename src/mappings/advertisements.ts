@@ -13,14 +13,35 @@ export async function handleAdvertisementStoredEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [codec, source],
+      data: [advertisementCodec, sourceCodec],
     },
   } = event;
 
-  const sourceAddress = source.toString();
+  await upsertAdvertisement(event, sourceCodec.toString(), advertisementCodec);
+}
 
+export async function handleProcessorAdvertisementEvent(
+  event: SubstrateEvent
+): Promise<void> {
+  await logAndStats(event);
+
+  // Get data from the event
+  logger.info(JSON.stringify(event));
+  const {
+    event: {
+      data: [_managerCodec, sourceCodec, advertisementCodec],
+    },
+  } = event;
+
+  await upsertAdvertisement(event, sourceCodec.toString(), advertisementCodec);
+}
+
+async function upsertAdvertisement(
+  event: SubstrateEvent,
+  sourceAddress: string,
+  data: any
+): Promise<void> {
   const blockNumber: number = event.block.block.header.number.toNumber();
-  const data = codec as any;
 
   const sourceAccount = await getOrCreateAccount(sourceAddress);
 
