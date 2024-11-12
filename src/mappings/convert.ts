@@ -1,5 +1,10 @@
 import { Codec } from "@polkadot/types/types";
-import { MultiOriginVariant } from "../types";
+import {
+  AssignmentStrategy,
+  MultiOriginVariant,
+  SchedulingWindowVariant,
+} from "../types";
+import { MatchProps } from "./jobs";
 
 export type JobId = [MultiOriginProps, bigint];
 
@@ -91,4 +96,46 @@ export function codecToJobAssignment(codec: Codec): JobAssignment {
     })),
     execution: data.execution.isAll ? null : data.execution.asIndex.toNumber(),
   };
+}
+export function codecToSchedulingWindow(data: any): {
+  schedulingWindowVariant: SchedulingWindowVariant;
+  schedulingWindowEnd?: Date;
+  schedulingWindowDelta?: bigint;
+} {
+  if (data.isDelta) {
+    return {
+      schedulingWindowVariant: SchedulingWindowVariant.Delta,
+      schedulingWindowDelta: data.asDelta.toBigInt(),
+    };
+  } else if (data.isEnd) {
+    return {
+      schedulingWindowVariant: SchedulingWindowVariant.End,
+      schedulingWindowEnd: new Date(data.asEnd.toNumber()),
+    };
+  } else {
+    throw Error(
+      `Unknown SchedulingWindow variant in ${JSON.stringify(data.toJSON())}`
+    );
+  }
+}
+export function codecToAssignmentStrategy(codec: Codec): {
+  assignmentStrategy: AssignmentStrategy;
+  instantMatch?: MatchProps[];
+} {
+  const data = codec as any;
+  if (data.isSingle) {
+    return {
+      assignmentStrategy: AssignmentStrategy.Single,
+      instantMatch: data.asSingle.unwrapOr(undefined)?.map((value: any) => ({
+        source: value.source.toString(),
+        startDelay: value.startDelay.toBigInt(),
+      })),
+    };
+  } else if (data.isCompeting) {
+    return { assignmentStrategy: AssignmentStrategy.Competing };
+  }
+
+  throw new Error(
+    `unsupported AssignmentStrategy variant: ${codec.toString()}`
+  );
 }

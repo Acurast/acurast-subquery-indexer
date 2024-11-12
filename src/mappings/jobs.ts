@@ -1,4 +1,3 @@
-import { Codec } from "@polkadot/types-codec/types";
 import { SubstrateEvent } from "@subql/types";
 import {
   Account,
@@ -19,7 +18,12 @@ import {
   getOrCreateMultiOrigin,
   jobIdToString,
 } from "../utils";
-import { codecToJobAssignment, codecToJobId, PubKey } from "./convert";
+import {
+  codecToAssignmentStrategy,
+  codecToJobAssignment,
+  codecToJobId,
+  PubKey,
+} from "./convert";
 import { logAndStats } from "./common";
 import { TextDecoder } from "util";
 
@@ -440,28 +444,6 @@ export async function handleAllowedSourcesUpdatedEvent(
   }
 
   await Promise.all(promises);
-}
-
-function codecToAssignmentStrategy(codec: Codec): {
-  assignmentStrategy: AssignmentStrategy;
-  instantMatch?: MatchProps[];
-} {
-  const data = codec as any;
-  if (data.isSingle) {
-    return {
-      assignmentStrategy: AssignmentStrategy.Single,
-      instantMatch: data.asSingle.unwrapOr(undefined)?.map((value: any) => ({
-        source: value.source.toString(),
-        startDelay: value.startDelay.toBigInt(),
-      })),
-    };
-  } else if (data.isCompeting) {
-    return { assignmentStrategy: AssignmentStrategy.Competing };
-  }
-
-  throw new Error(
-    `unsupported AssignmentStrategy variant: ${codec.toString()}`
-  );
 }
 
 export type MatchProps = {

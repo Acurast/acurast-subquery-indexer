@@ -1,8 +1,9 @@
 import { SubstrateEvent } from "@subql/types";
-import { Advertisement, Heartbeat, SchedulingWindowVariant } from "../types";
+import { Advertisement, Heartbeat } from "../types";
 import { AdvertisementProps } from "../types/models/Advertisement";
 import { getOrCreateAccount } from "../utils";
 import { logAndStats } from "./common";
+import { codecToSchedulingWindow } from "./convert";
 
 export async function handleAdvertisementStoredEvent(
   event: SubstrateEvent
@@ -80,28 +81,6 @@ async function upsertAdvertisement(
   }
 
   await Promise.all([advertisement.save(), sourceAccount.save()]);
-}
-
-function codecToSchedulingWindow(data: any): {
-  schedulingWindowVariant: SchedulingWindowVariant;
-  schedulingWindowEnd?: Date;
-  schedulingWindowDelta?: bigint;
-} {
-  if (data.isDelta) {
-    return {
-      schedulingWindowVariant: SchedulingWindowVariant.Delta,
-      schedulingWindowDelta: data.asDelta.toBigInt(),
-    };
-  } else if (data.isEnd) {
-    return {
-      schedulingWindowVariant: SchedulingWindowVariant.End,
-      schedulingWindowEnd: new Date(data.asEnd.toNumber()),
-    };
-  } else {
-    throw Error(
-      `Unknown SchedulingWindow variant in ${JSON.stringify(data.toJSON())}`
-    );
-  }
 }
 
 export async function handleAdvertisementRemovedEvent(
