@@ -5,7 +5,7 @@ import {
   AssignmentStrategy,
   Finalization,
   Job,
-  JobAllowsSource,
+  JobAllowsProcessor,
   JobStatus,
   JobStatusChange,
   Match,
@@ -60,7 +60,7 @@ export async function handleMatchedEvents(
       id: execution
         ? `${job.id}-${match.source}-${execution}`
         : `${job.id}-${match.source}`,
-      sourceId: match.source.toString(),
+      processorId: match.source.toString(),
       jobId: job.id,
       slot: index,
       execution,
@@ -95,7 +95,7 @@ export async function handleJobRegistrationAssignedEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [jobIdCodec, sourceCodec, assignmentCodec],
+      data: [jobIdCodec, processorCodec, assignmentCodec],
     },
   } = event;
 
@@ -107,13 +107,13 @@ export async function handleJobRegistrationAssignedEvent(
   }
 
   const assignment = codecToJobAssignment(assignmentCodec);
-  const sourceId = sourceCodec.toString();
+  const processorAddress = processorCodec.toString();
   const blockNumber: number = event.block.block.header.number.toNumber();
   const timestamp = event.block.timestamp!;
 
   const id = assignment.execution
-    ? `${job.id}-${sourceId}-${assignment.execution}`
-    : `${job.id}-${sourceId}`;
+    ? `${job.id}-${processorAddress}-${assignment.execution}`
+    : `${job.id}-${processorAddress}`;
   const assignmentEntity = Assignment.create({
     // since it's a one-to-one relation
     id,
@@ -145,7 +145,7 @@ export async function handleReportedEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [jobIdCodec, sourceCodec, assignmentCodec],
+      data: [jobIdCodec, processorCodec, assignmentCodec],
     },
   } = event;
 
@@ -157,12 +157,12 @@ export async function handleReportedEvent(
   }
 
   const assignment = codecToJobAssignment(assignmentCodec);
-  const sourceId = sourceCodec.toString();
+  const processorAddress = processorCodec.toString();
   const blockNumber: number = event.block.block.header.number.toNumber();
   const timestamp = event.block.timestamp!;
   const id = assignment.execution
-    ? `${job.id}-${sourceId}-${assignment.execution}`
-    : `${job.id}-${sourceId}`;
+    ? `${job.id}-${processorAddress}-${assignment.execution}`
+    : `${job.id}-${processorAddress}`;
 
   // retrieve execution result over extrinsic
   logger.info(JSON.stringify(event.extrinsic!.extrinsic.method.toHuman()));
@@ -219,11 +219,11 @@ export async function handleJobFinalizedEvent(
   const timestamp = event.block.timestamp!;
 
   // retrieve execution origin over extrinsic
-  const sourceId = event.extrinsic!.extrinsic.signer.toString();
+  const processorAddress = event.extrinsic!.extrinsic.signer.toString();
   logger.info(event.extrinsic!.extrinsic.signer.toString());
   logger.info(JSON.stringify(event.extrinsic!.extrinsic.signer.toJSON()));
 
-  const matchId = `${job.id}-${sourceId}`;
+  const matchId = `${job.id}-${processorAddress}`;
   const match = await Match.get(matchId);
   if (!match) {
     return;
@@ -243,8 +243,8 @@ export async function handleJobFinalizedEvent(
   }
 
   const id = match.execution
-    ? `${job.id}-${sourceId}-${match.execution}`
-    : `${job.id}-${sourceId}`;
+    ? `${job.id}-${processorAddress}-${match.execution}`
+    : `${job.id}-${processorAddress}`;
 
   await Finalization.create({
     id,
@@ -310,7 +310,7 @@ export async function handleJobRegistrationStoredEvent(
   try {
     script = new TextDecoder().decode(data.script.toU8a());
   } catch (e) {
-    script = data.script.toHex()
+    script = data.script.toHex();
   }
 
   job = Job.create({
@@ -321,7 +321,7 @@ export async function handleJobRegistrationStoredEvent(
     jobIdSeq: jobId[1],
 
     script,
-    allowOnlyVerifiedSources: data.allowOnlyVerifiedSources.toJSON(),
+    allowOnlyVerifiedProcessors: data.allowOnlyVerifiedSources.toJSON(),
     memory: data.memory.toNumber(),
     networkRequests: data.networkRequests.toNumber(),
     storage: data.storage.toNumber(),
@@ -349,22 +349,22 @@ export async function handleJobRegistrationStoredEvent(
     status: JobStatus.Open,
   });
 
-  const allowedSources: JobAllowsSource[] = [];
-  const sources: Account[] = [];
+  const allowedProcessors: JobAllowsProcessor[] = [];
+  const processors: Account[] = [];
   if (data.allowedSources.isSome) {
-    for (const allowedSource of data.allowedSources.unwrap()) {
-      const sourceAddress = allowedSource.toString();
-      const sourceAccount = await getOrCreateAccount(sourceAddress);
-      const id = `${job.id}-${sourceAddress}`;
+    for (const allowedProcessor of data.allowedSources.unwrap()) {
+      const processorAddress = allowedProcessor.toString();
+      const processor = await getOrCreateAccount(processorAddress);
+      const id = `${job.id}-${processorAddress}`;
       // the runtime makes sure we do not save duplicates but still returns all updates (with potential duplicates) so we check for existence
-      if (!(await JobAllowsSource.get(id))) {
-        // only push if JobAllowsSource did not yet exist
-        sources.push(sourceAccount);
-        allowedSources.push(
-          JobAllowsSource.create({
-            id: `${job.id}-${sourceAddress}`,
+      if (!(await JobAllowsProcessor.get(id))) {
+        // only push if JobAllowsProcessor did not yet exist
+        processors.push(processor);
+        allowedProcessors.push(
+          JobAllowsProcessor.create({
+            id: `${job.id}-${processorAddress}`,
             jobId: job.id,
-            sourceId: sourceAccount.id,
+            processorId: processor.id,
           })
         );
       }
@@ -381,7 +381,7 @@ export async function handleJobRegistrationStoredEvent(
     matchs = instantMatch.map((match, index: number) => {
       return Match.create({
         id: `${job.id}-${match.source}`,
-        sourceId: match.source,
+        processorId: match.source,
         jobId: job.id,
         slot: index,
         execution: undefined, // since this event is matching all executions
@@ -398,8 +398,8 @@ export async function handleJobRegistrationStoredEvent(
     account.save(),
     change.save(),
     ...matchs.map((e) => e.save()),
-    ...sources.map((s) => s.save()),
-    ...allowedSources.map((s) => s.save()),
+    ...processors.map((s) => s.save()),
+    ...allowedProcessors.map((s) => s.save()),
   ]);
 }
 
@@ -426,25 +426,25 @@ export async function handleAllowedSourcesUpdatedEvent(
 
   const promises: Promise<any>[] = [];
   for (const u of updatesCodec as any) {
-    // get the ss58 address of the source
-    const sourceAddress = u.item.toString();
-    const id = `${job.id}-${sourceAddress}`;
+    // get the ss58 address of the processor
+    const processorAddress = u.item.toString();
+    const id = `${job.id}-${processorAddress}`;
     if (u.operation.isAdd) {
-      const sourceAccount = await getOrCreateAccount(sourceAddress);
+      const processor = await getOrCreateAccount(processorAddress);
       // the runtime makes sure we do not save duplicates but still returns all updates (with potential duplicates) so we check for existence
-      if (!(await JobAllowsSource.get(id))) {
-        // only push if JobAllowsSource did not yet exist
-        promises.push(sourceAccount.save());
+      if (!(await JobAllowsProcessor.get(id))) {
+        // only push if JobAllowsProcessor did not yet exist
+        promises.push(processor.save());
         promises.push(
-          JobAllowsSource.create({
-            id: `${job.id}-${sourceAddress}`,
+          JobAllowsProcessor.create({
+            id: `${job.id}-${processorAddress}`,
             jobId: job.id,
-            sourceId: sourceAccount.id,
+            processorId: processor.id,
           }).save()
         );
       }
     } else if (u.operation.isRemove) {
-      promises.push(JobAllowsSource.remove(id));
+      promises.push(JobAllowsProcessor.remove(id));
     } else {
       throw new Error(
         `unsupported ListUpdateOperation variant in ListUpdate: ${u.toString()}`

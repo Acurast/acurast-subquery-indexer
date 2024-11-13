@@ -12,21 +12,21 @@ export async function handleAttestationStoredEvent(
   // logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [codec, source],
+      data: [codec, processorCodec],
     },
   } = event;
 
-  const sourceAddress = source.toString();
+  const processorAddress = processorCodec.toString();
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   const data = codec as any;
 
-  const sourceAccount = await getOrCreateAccount(sourceAddress);
+  const processor = await getOrCreateAccount(processorAddress);
 
   // prepare props
   const attestation = Attestation.create({
-    id: `${sourceAddress}-${blockNumber}-${event.idx}`,
-    sourceId: sourceAddress,
+    id: `${processorAddress}-${blockNumber}-${event.idx}`,
+    processorId: processorAddress,
     blockNumber,
     timestamp: event.block.timestamp!,
     notBefore: data.validity.notBefore.toBigInt(),
@@ -34,5 +34,5 @@ export async function handleAttestationStoredEvent(
     raw: JSON.stringify(data.toJSON()),
   });
 
-  await Promise.all([attestation.save(), sourceAccount.save()]);
+  await Promise.all([attestation.save(), processor.save()]);
 }

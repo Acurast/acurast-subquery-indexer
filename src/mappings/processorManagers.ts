@@ -79,13 +79,13 @@ export async function handleProcessorPairingsUpdatedEvent(
   for (const u of pairingUpdatesCodec as any) {
     // get the ss58 address of the processor
     const processorAddress = u.item.toString();
-    const sourceAccount = await getOrCreateAccount(processorAddress);
+    const processor = await getOrCreateAccount(processorAddress);
     if (u.operation.isAdd) {
-      sourceAccount.managerId = manager.id;
-      await sourceAccount.save();
+      processor.managerId = manager.id;
+      await processor.save();
     } else if (u.operation.isRemove) {
-      sourceAccount.managerId = undefined;
-      await sourceAccount.save();
+      processor.managerId = undefined;
+      await processor.save();
     } else {
       throw new Error(
         `unsupported ListUpdateOperation variant in ListUpdate: ${u.toString()}`
@@ -103,24 +103,24 @@ export async function handleProcessorHeartbeatEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [source],
+      data: [processorCodec],
     },
   } = event;
 
-  const sourceAddress = source.toString();
+  const processorAddress = processorCodec.toString();
 
   const blockNumber: number = event.block.block.header.number.toNumber();
 
-  const sourceAccount = await getOrCreateAccount(sourceAddress);
+  const processor = await getOrCreateAccount(processorAddress);
 
   const heartbeat = Heartbeat.create({
     id: `${blockNumber}-${event.idx}`,
-    sourceId: sourceAccount.id,
+    processorId: processor.id,
     blockNumber,
     timestamp: event.block.timestamp!,
   });
 
-  await Promise.all([heartbeat.save(), sourceAccount.save()]);
+  await Promise.all([heartbeat.save(), processor.save()]);
 }
 
 export async function handleProcessorHeartbeatWithVersionEvent(
@@ -132,27 +132,27 @@ export async function handleProcessorHeartbeatWithVersionEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [source, codec],
+      data: [processorCodec, codec],
     },
   } = event;
 
-  const sourceAddress = source.toString();
+  const processorAddress = processorCodec.toString();
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   const data = codec as any;
 
-  const sourceAccount = await getOrCreateAccount(sourceAddress);
+  const processor = await getOrCreateAccount(processorAddress);
 
   const heartbeat = Heartbeat.create({
     id: `${blockNumber}-${event.idx}`,
-    sourceId: sourceAccount.id,
+    processorId: processor.id,
     blockNumber,
     timestamp: event.block.timestamp!,
     platform: data.platform.toNumber(),
     build_number: data.buildNumber.toNumber(),
   });
 
-  await Promise.all([heartbeat.save(), sourceAccount.save()]);
+  await Promise.all([heartbeat.save(), processor.save()]);
 }
 
 export async function handleProcessorRewardSentEvent(
@@ -176,7 +176,7 @@ export async function handleProcessorRewardSentEvent(
   const processorAddress = processorCodec.toString();
   await ProcessorReward.create({
     id: `${blockNumber}-${event.idx}`,
-    sourceId: processorAddress,
+    processorId: processorAddress,
     blockNumber,
     timestamp: event.block.timestamp!,
     amount: (amountCodec as any).toBigInt(),

@@ -14,11 +14,11 @@ export async function handleAdvertisementStoredEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [advertisementCodec, sourceCodec],
+      data: [advertisementCodec, processorCodec],
     },
   } = event;
 
-  await upsertAdvertisement(event, sourceCodec.toString(), advertisementCodec);
+  await upsertAdvertisement(event, processorCodec.toString(), advertisementCodec);
 }
 
 export async function handleProcessorAdvertisementEvent(
@@ -30,28 +30,28 @@ export async function handleProcessorAdvertisementEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [_managerCodec, sourceCodec, advertisementCodec],
+      data: [_managerCodec, processorCodec, advertisementCodec],
     },
   } = event;
 
-  await upsertAdvertisement(event, sourceCodec.toString(), advertisementCodec);
+  await upsertAdvertisement(event, processorCodec.toString(), advertisementCodec);
 }
 
 async function upsertAdvertisement(
   event: SubstrateEvent,
-  sourceAddress: string,
+  processorAddress: string,
   data: any
 ): Promise<void> {
   const blockNumber: number = event.block.block.header.number.toNumber();
 
-  const sourceAccount = await getOrCreateAccount(sourceAddress);
+  const processor = await getOrCreateAccount(processorAddress);
 
-  let advertisement = await Advertisement.get(sourceAddress);
+  let advertisement = await Advertisement.get(processorAddress);
 
   // prepare props
   const props: AdvertisementProps = {
-    id: sourceAddress,
-    sourceId: sourceAccount.id,
+    id: processorAddress,
+    processorId: processor.id,
     blockNumber,
     timestamp: event.block.timestamp!,
     ...codecToSchedulingWindow(data.pricing.schedulingWindow),
@@ -80,7 +80,7 @@ async function upsertAdvertisement(
     advertisement = Advertisement.create(props);
   }
 
-  await Promise.all([advertisement.save(), sourceAccount.save()]);
+  await Promise.all([advertisement.save(), processor.save()]);
 }
 
 export async function handleAdvertisementRemovedEvent(
@@ -92,17 +92,17 @@ export async function handleAdvertisementRemovedEvent(
   logger.info(JSON.stringify(event));
   const {
     event: {
-      data: [source],
+      data: [processorCodec],
     },
   } = event;
 
-  let advertisement = await Advertisement.get(source.toString());
+  let advertisement = await Advertisement.get(processorCodec.toString());
   if (advertisement) {
     advertisement.removed = true;
     await advertisement?.save();
   } else {
     logger.warn(
-      `AdvertisementRemoved event skipped for ${source.toString()} at block ${event.block.block.header.number.toString()}`
+      `AdvertisementRemoved event skipped for ${processorCodec.toString()} at block ${event.block.block.header.number.toString()}`
     );
   }
 }

@@ -38,7 +38,7 @@ query {
       feePerExecution
       match {
         jobId
-        sourceId
+        processorId
       }
       timestamp
       blockNumber
@@ -73,7 +73,7 @@ query {
       matches {
         nodes {
           id
-          source {
+          processor {
             id
             heartbeats {
               nodes {

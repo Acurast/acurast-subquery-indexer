@@ -76,8 +76,8 @@ type Account @entity {
   """
   manager: Manager
 
-  heartbeats: [Heartbeat!]! @derivedFrom(field: "source")
-  attestation: [Attestation!]! @derivedFrom(field: "source")
+  heartbeats: [Heartbeat!]! @derivedFrom(field: "processor")
+  attestation: [Attestation!]! @derivedFrom(field: "processor")
 }
 
 enum MultiOriginVariant {
@@ -110,7 +110,7 @@ type AdAllowsConsumer @entity {
 
 type Advertisement @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   """
   The block height of the first encounter
   """
@@ -139,7 +139,7 @@ type Advertisement @entity {
 
 type Heartbeat @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   """
   The block height of the first encounter
   """
@@ -155,7 +155,7 @@ type Heartbeat @entity {
 
 type ProcessorReward @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   """
   The block height of the first encounter
   """
@@ -169,14 +169,14 @@ type ProcessorReward @entity {
 
 type RemainingStorageCapacity @entity {
   id: ID!
-  source: Advertisement!
+  processor: Advertisement!
   timestamp: Date! @index
   remainingStorageCapacity: Int
 }
 
 type Attestation @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   """
   The block height of the first encounter
   """
@@ -207,8 +207,8 @@ type Job @entity {
   jobIdSeq: BigInt! @index(unique: true)
 
   script: String!
-  allowedSources: [JobAllowsSource!] @derivedFrom(field: "job")
-  allowOnlyVerifiedSources: Boolean!
+  allowedProcessors: [JobAllowsProcessor!] @derivedFrom(field: "job")
+  allowOnlyVerifiedProcessors: Boolean!
   memory: Int!
   networkRequests: Int!
   storage: Int!
@@ -239,9 +239,9 @@ enum AssignmentStrategy {
   Competing
 }
 
-type JobAllowsSource @entity {
+type JobAllowsProcessor @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   job: Job!
 }
 
@@ -290,7 +290,7 @@ type Assignment @entity {
 
 type Match @entity {
   id: ID!
-  source: Account!
+  processor: Account!
   job: Job!
 
   slot: Int!
