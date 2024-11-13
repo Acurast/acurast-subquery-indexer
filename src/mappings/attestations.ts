@@ -26,7 +26,7 @@ export async function handleAttestationStoredEvent(
   // prepare props
   const attestation = Attestation.create({
     id: `${sourceAddress}-${blockNumber}-${event.idx}`,
-    sourceId: sourceAccount.id,
+    sourceId: sourceAddress,
     blockNumber,
     timestamp: event.block.timestamp!,
     notBefore: data.validity.notBefore.toBigInt(),

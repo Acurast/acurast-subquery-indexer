@@ -1,5 +1,5 @@
 import { SubstrateEvent } from "@subql/types";
-import { Advertisement, Heartbeat } from "../types";
+import { Advertisement } from "../types";
 import { AdvertisementProps } from "../types/models/Advertisement";
 import { getOrCreateAccount } from "../utils";
 import { logAndStats } from "./common";
@@ -96,45 +96,13 @@ export async function handleAdvertisementRemovedEvent(
     },
   } = event;
 
-  let advertisement = await Advertisement.get(source.toHex());
+  let advertisement = await Advertisement.get(source.toString());
   if (advertisement) {
     advertisement.removed = true;
     await advertisement?.save();
   } else {
     logger.warn(
-      `AdvertisementRemoved event skipped for ${source.toHex()} at block ${event.block.block.header.number.toString()}`
+      `AdvertisementRemoved event skipped for ${source.toString()} at block ${event.block.block.header.number.toString()}`
     );
   }
-}
-
-export async function handleProcessorHeartbeatWithVersionEvent(
-  event: SubstrateEvent
-): Promise<void> {
-  await logAndStats(event);
-
-  // Get data from the event
-  logger.info(JSON.stringify(event));
-  const {
-    event: {
-      data: [source, codec],
-    },
-  } = event;
-
-  const sourceAddress = source.toString();
-
-  const blockNumber: number = event.block.block.header.number.toNumber();
-  const data = codec as any;
-
-  const sourceAccount = await getOrCreateAccount(sourceAddress);
-
-  const heartbeat = Heartbeat.create({
-    id: `${blockNumber}-${event.idx}`,
-    sourceId: sourceAccount.id,
-    blockNumber,
-    timestamp: event.block.timestamp!,
-    platform: data.platform.toNumber(),
-    build_number: data.buildNumber.toNumber(),
-  });
-
-  await Promise.all([heartbeat.save(), sourceAccount.save()]);
 }

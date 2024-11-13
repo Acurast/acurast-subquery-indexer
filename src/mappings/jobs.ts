@@ -50,7 +50,7 @@ export async function handleMatchedEvents(
   if (!job) {
     return;
   }
-  const matchs: Match[] = data.sources.map((match: any, index: number) => {
+  const matches: Match[] = data.sources.map((match: any, index: number) => {
     // since this event is might be a match for all executions, execution can be undefined
     const execution: number | undefined = data.hasOwnProperty("executionIndex")
       ? data.executionIndex.toNumber()
@@ -58,8 +58,8 @@ export async function handleMatchedEvents(
     return Match.create({
       // the slot is not needed in id since a processor gets only matched to one slot of a job
       id: execution
-        ? `${job.id}-${match.source}`
-        : `${job.id}-${match.source}-${execution}`,
+        ? `${job.id}-${match.source}-${execution}`
+        : `${job.id}-${match.source}`,
       sourceId: match.source.toString(),
       jobId: job.id,
       slot: index,
@@ -82,7 +82,7 @@ export async function handleMatchedEvents(
   await Promise.all([
     job.save(),
     change.save(),
-    ...matchs.map((e) => e.save()),
+    ...matches.map((e) => e.save()),
   ]);
 }
 
@@ -304,6 +304,15 @@ export async function handleJobRegistrationStoredEvent(
   const { assignmentStrategy, instantMatch } = codecToAssignmentStrategy(
     data.extra.requirements.assignmentStrategy
   );
+
+  // to be future proof we want to fail soft and just store the bytes as hex if it's not UTF-8 text
+  let script = "";
+  try {
+    script = new TextDecoder().decode(data.script.toU8a());
+  } catch (e) {
+    script = data.script.toHex()
+  }
+
   job = Job.create({
     id,
     origin: jobId[0].origin,
@@ -311,7 +320,7 @@ export async function handleJobRegistrationStoredEvent(
     originAccountId: account.id,
     jobIdSeq: jobId[1],
 
-    script: data.script.toHex(),
+    script,
     allowOnlyVerifiedSources: data.allowOnlyVerifiedSources.toJSON(),
     memory: data.memory.toNumber(),
     networkRequests: data.networkRequests.toNumber(),

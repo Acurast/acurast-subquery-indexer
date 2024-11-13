@@ -41,7 +41,7 @@ type Transfer @entity {
   """
   The timestamp of the transfer
   """
-  timestamp: Date!
+  timestamp: Date! @index
   """
   Amount that is transferred
   """
@@ -118,7 +118,7 @@ type Advertisement @entity {
   """
   The timestamp of the first encounter
   """
-  timestamp: Date!
+  timestamp: Date! @index
 
   schedulingWindowVariant: SchedulingWindowVariant!
   schedulingWindowEnd: Date
@@ -147,10 +147,24 @@ type Heartbeat @entity {
   """
   The timestamp of the first encounter
   """
-  timestamp: Date!
+  timestamp: Date! @index
 
-  platform: Int!
-  build_number: Int!
+  platform: Int @index
+  build_number: Int @index
+}
+
+type ProcessorReward @entity {
+  id: ID!
+  source: Account!
+  """
+  The block height of the first encounter
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp of the first encounter
+  """
+  timestamp: Date! @index
+  amount: BigInt!
 }
 
 type RemainingStorageCapacity @entity {
@@ -170,7 +184,7 @@ type Attestation @entity {
   """
   The timestamp of the first encounter
   """
-  timestamp: Date!
+  timestamp: Date! @index
 
   notBefore: BigInt
   notAfter: BigInt
@@ -192,7 +206,7 @@ type Job @entity {
   originAccount: Account
   jobIdSeq: BigInt! @index(unique: true)
 
-  script: Bytes!
+  script: String!
   allowedSources: [JobAllowsSource!] @derivedFrom(field: "job")
   allowOnlyVerifiedSources: Boolean!
   memory: Int!
@@ -241,7 +255,7 @@ type JobStatusChange @entity {
   """
   The timestamp of the status change
   """
-  timestamp: Date!
+  timestamp: Date! @index
   status: JobStatus!
 }
 
@@ -268,7 +282,7 @@ type Assignment @entity {
   """
   The timestamp of the assignment (match acknowledgment)
   """
-  timestamp: Date!
+  timestamp: Date! @index
 
   reports: [Report!]! @derivedFrom(field: "assignment")
   finalizations: [Finalization!]! @derivedFrom(field: "assignment")
@@ -295,7 +309,7 @@ type Match @entity {
   """
   The timestamp of the match; can be identical to job.timestamp for instant matches
   """
-  timestamp: Date!
+  timestamp: Date! @index
 
   assignments: [Assignment!]! @derivedFrom(field: "match")
 }
@@ -323,7 +337,7 @@ type Report @entity {
   """
   The timestamp of the report
   """
-  timestamp: Date!
+  timestamp: Date! @index
   variant: ReportVariant!
   operationHash: String
   errorMessage: String
@@ -344,7 +358,7 @@ type Finalization @entity {
   """
   The timestamp of the report
   """
-  timestamp: Date!
+  timestamp: Date! @index
 }
 
 type Manager @entity {
@@ -365,5 +379,5 @@ type Manager @entity {
   """
   The timestamp when the manager was created
   """
-  timestamp: Date!
+  timestamp: Date! @index
 }
