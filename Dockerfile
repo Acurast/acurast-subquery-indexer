@@ -17,6 +17,7 @@ EXPOSE 3000
 
 ENV NODE_ENV production
 ENV TZ UTC
+ENV NODE_OPTIONS=--max-old-space-size=1536
 
 # Run the application.
 CMD yarn start
