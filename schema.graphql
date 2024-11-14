@@ -126,13 +126,13 @@ type Advertisement @entity {
   feePerMillisecond: BigInt!
   feePerStorageByte: BigInt!
   baseFeePerExecution: BigInt!
-  maxMemory: Int!
-  storageCapacity: Int!
+  maxMemory: BigInt!
+  storageCapacity: BigInt!
   allowedConsumers: [AdAllowsConsumer!] @derivedFrom(field: "ad")
   availableModuleDataEncryption: Boolean!
-  networkRequestQuota: Int!
+  networkRequestQuota: BigInt!
 
-  remainingStorageCapacity: Int
+  remainingStorageCapacity: BigInt
 
   removed: Boolean!
 }
@@ -171,7 +171,7 @@ type RemainingStorageCapacity @entity {
   id: ID!
   processor: Advertisement!
   timestamp: Date! @index
-  remainingStorageCapacity: Int
+  remainingStorageCapacity: BigInt
 }
 
 type Attestation @entity {
@@ -209,9 +209,9 @@ type Job @entity {
   script: String!
   allowedProcessors: [JobAllowsProcessor!] @derivedFrom(field: "job")
   allowOnlyVerifiedProcessors: Boolean!
-  memory: Int!
-  networkRequests: Int!
-  storage: Int!
+  memory: BigInt!
+  networkRequests: BigInt!
+  storage: BigInt!
   requiredModuleDataEncryption: Boolean!
 
   # schedule

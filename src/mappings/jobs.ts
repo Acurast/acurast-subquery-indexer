@@ -322,9 +322,9 @@ export async function handleJobRegistrationStoredEvent(
 
     script,
     allowOnlyVerifiedProcessors: data.allowOnlyVerifiedSources.toJSON(),
-    memory: data.memory.toNumber(),
-    networkRequests: data.networkRequests.toNumber(),
-    storage: data.storage.toNumber(),
+    memory: data.memory.toBigInt(),
+    networkRequests: data.networkRequests.toBigInt(),
+    storage: data.storage.toBigInt(),
     requiredModuleDataEncryption:
       !!data.requiredModules.find(
         (module: any) => module.__kind === "DataEncryption"

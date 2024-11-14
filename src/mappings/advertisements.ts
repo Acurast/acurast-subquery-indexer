@@ -58,13 +58,13 @@ async function upsertAdvertisement(
     feePerMillisecond: data.pricing.feePerMillisecond.toBigInt(),
     feePerStorageByte: data.pricing.feePerStorageByte.toBigInt(),
     baseFeePerExecution: data.pricing.baseFeePerExecution.toBigInt(),
-    maxMemory: data.maxMemory.toNumber(),
-    storageCapacity: data.storageCapacity.toNumber(),
+    maxMemory: data.maxMemory.toBigInt(),
+    storageCapacity: data.storageCapacity.toBigInt(),
     availableModuleDataEncryption:
       !!data.availableModules.find(
         (module: any) => module.__variant === "DataEncryption"
       ) || false,
-    networkRequestQuota: data.networkRequestQuota.toNumber(),
+    networkRequestQuota: data.networkRequestQuota.toBigInt(),
     removed: false,
   };
 
