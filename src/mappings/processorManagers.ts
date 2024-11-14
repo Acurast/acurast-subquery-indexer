@@ -78,7 +78,7 @@ export async function handleProcessorPairingsUpdatedEvent(
 
   for (const u of pairingUpdatesCodec as any) {
     // get the ss58 address of the processor
-    const processorAddress = u.item.toString();
+    const processorAddress = u.item.account.toString();
     const processor = await getOrCreateAccount(processorAddress);
     if (u.operation.isAdd) {
       processor.managerId = manager.id;

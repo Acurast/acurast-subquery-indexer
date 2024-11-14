@@ -31,11 +31,11 @@ spec:
               subPath: "pg_data"
           resources:
             requests:
-              cpu: "0.01"
-              memory: 200M
+              cpu: "0.5"
+              memory: 400M
             limits:
-              cpu: "0.8"
-              memory: 1000M
+              cpu: "1"
+              memory: 1500M
 
       volumes:
         - name: postgres-pv
