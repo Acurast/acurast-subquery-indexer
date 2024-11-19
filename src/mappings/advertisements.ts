@@ -1,6 +1,5 @@
 import { SubstrateEvent } from "@subql/types";
 import { Advertisement } from "../types";
-import { AdvertisementProps } from "../types/models/Advertisement";
 import { getOrCreateAccount } from "../utils";
 import { logAndStats } from "./common";
 import { codecToSchedulingWindow } from "./convert";
@@ -18,7 +17,11 @@ export async function handleAdvertisementStoredEvent(
     },
   } = event;
 
-  await upsertAdvertisement(event, processorCodec.toString(), advertisementCodec);
+  await upsertAdvertisement(
+    event,
+    processorCodec.toString(),
+    advertisementCodec
+  );
 }
 
 export async function handleProcessorAdvertisementEvent(
@@ -34,7 +37,11 @@ export async function handleProcessorAdvertisementEvent(
     },
   } = event;
 
-  await upsertAdvertisement(event, processorCodec.toString(), advertisementCodec);
+  await upsertAdvertisement(
+    event,
+    processorCodec.toString(),
+    advertisementCodec
+  );
 }
 
 async function upsertAdvertisement(
@@ -46,10 +53,7 @@ async function upsertAdvertisement(
 
   const processor = await getOrCreateAccount(processorAddress);
 
-  let advertisement = await Advertisement.get(processorAddress);
-
-  // prepare props
-  const props: AdvertisementProps = {
+  let advertisement = Advertisement.create({
     id: processorAddress,
     processorId: processor.id,
     blockNumber,
@@ -66,19 +70,7 @@ async function upsertAdvertisement(
       ) || false,
     networkRequestQuota: data.networkRequestQuota.toBigInt(),
     removed: false,
-  };
-
-  // update or create with prepared props
-  if (advertisement) {
-    for (const key in props) {
-      if (key in advertisement) {
-        // @ts-ignore - Ignoring TypeScript error for dynamically setting properties
-        advertisement[key] = props[key];
-      }
-    }
-  } else {
-    advertisement = Advertisement.create(props);
-  }
+  });
 
   await Promise.all([advertisement.save(), processor.save()]);
 }

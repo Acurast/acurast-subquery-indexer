@@ -50,26 +50,32 @@ export async function handleMatchedEvents(
   if (!job) {
     return;
   }
-  const matches: Match[] = data.sources.map((match: any, index: number) => {
+
+  const promises: Promise<any>[] = [];
+  for (const [index, match] of (data.sources as any).entries()) {
     // since this event is might be a match for all executions, execution can be undefined
     const execution: number | undefined = data.hasOwnProperty("executionIndex")
       ? data.executionIndex.toNumber()
       : undefined;
-    return Match.create({
-      // the slot is not needed in id since a processor gets only matched to one slot of a job
-      id: execution
-        ? `${job.id}-${match.source}-${execution}`
-        : `${job.id}-${match.source}`,
-      processorId: match.source.toString(),
-      jobId: job.id,
-      slot: index,
-      execution,
-      startDelay: match.startDelay.toBigInt(),
-      instant: false,
-      blockNumber,
-      timestamp: event.block.timestamp!,
-    });
-  });
+    const processor = await getOrCreateAccount(match.source.toString());
+    promises.push(processor.save());
+    promises.push(
+      Match.create({
+        // the slot is not needed in id since a processor gets only matched to one slot of a job
+        id: execution
+          ? `${job.id}-${match.source}-${execution}`
+          : `${job.id}-${match.source}`,
+        processorId: processor.id,
+        jobId: job.id,
+        slot: index,
+        execution,
+        startDelay: match.startDelay.toBigInt(),
+        instant: false,
+        blockNumber,
+        timestamp: event.block.timestamp!,
+      }).save()
+    );
+  }
   job.status = JobStatus.Matched;
   const change = JobStatusChange.create({
     id: `${job.id}-${blockNumber}-${event.idx}`,
@@ -79,11 +85,7 @@ export async function handleMatchedEvents(
     status: job.status,
   });
 
-  await Promise.all([
-    job.save(),
-    change.save(),
-    ...matches.map((e) => e.save()),
-  ]);
+  await Promise.all([job.save(), change.save(), ...promises]);
 }
 
 export async function handleJobRegistrationAssignedEvent(
@@ -291,7 +293,7 @@ export async function handleJobRegistrationStoredEvent(
 
   const jobId = await codecToJobId(jobIdCodec);
   const id = jobIdToString(jobId);
-  const account = await getOrCreateMultiOrigin(jobId[0]);
+  const multiOrigin = await getOrCreateMultiOrigin(jobId[0]);
 
   const data = jobRegistrationCodec as any;
   const blockNumber: number = event.block.block.header.number.toNumber();
@@ -308,16 +310,16 @@ export async function handleJobRegistrationStoredEvent(
   // to be future proof we want to fail soft and just store the bytes as hex if it's not UTF-8 text
   let script = "";
   try {
-    script = new TextDecoder().decode(data.script.toU8a());
+    script = new TextDecoder("utf-8", { ignoreBOM: true }).decode(
+      data.script.toU8a()
+    );
   } catch (e) {
     script = data.script.toHex();
   }
 
   job = Job.create({
     id,
-    origin: jobId[0].origin,
-    originVariant: jobId[0].originVariant,
-    originAccountId: account.id,
+    multiOriginId: multiOrigin.id,
     jobIdSeq: jobId[1],
 
     script,
@@ -395,7 +397,7 @@ export async function handleJobRegistrationStoredEvent(
 
   await Promise.all([
     job.save(),
-    account.save(),
+    multiOrigin.save(),
     change.save(),
     ...matchs.map((e) => e.save()),
     ...processors.map((s) => s.save()),

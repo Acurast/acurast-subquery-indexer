@@ -5,7 +5,8 @@ import { JobId, MultiOriginProps } from "./mappings/convert";
 import { Account, MultiOrigin, MultiOriginVariant } from "./types";
 
 export async function getOrCreateAccount(
-  address: Codec | string
+  address: Codec | string,
+  save?: boolean
 ): Promise<Account> {
   const id = typeof address === "string" ? address : address.toString(); // id is ss58 address
   let account = await Account.get(id);
@@ -15,6 +16,9 @@ export async function getOrCreateAccount(
       id,
       publicKey: u8aToHex(decodeAddress(id)),
     });
+    if (save) {
+      await account.save();
+    }
   }
   return account;
 }
@@ -40,8 +44,7 @@ export async function getOrCreateMultiOrigin(
       case MultiOriginVariant.Acurast:
         const address = encodeAddress(origin, 42);
 
-        const account = await getOrCreateAccount(address);
-        await account.save();
+        const account = await getOrCreateAccount(address, true);
 
         multiOrigin = MultiOrigin.create({
           // use the account address here for faster filtering on related entities
@@ -86,7 +89,10 @@ export function jobIdToString(jobId: JobId): string {
   return multiOriginPrefix(jobId[0].originVariant, jobId[1].toString());
 }
 
-export function multiOriginPrefix(variant: MultiOriginVariant, text: string): string {
+export function multiOriginPrefix(
+  variant: MultiOriginVariant,
+  text: string
+): string {
   switch (variant) {
     case MultiOriginVariant.Acurast:
       return `Acurast#${text}`;

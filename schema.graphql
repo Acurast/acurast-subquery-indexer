@@ -12,11 +12,11 @@ type Stats @entity {
   """
   number: Int!
   """
-  The block height of the first encounter
+  The block height of the encounter
   """
   firstBlockNumber: Int!
   """
-  The timestamp of the first encounter
+  The timestamp of the encounter
   """
   firstTimestamp: Date!
   """
@@ -49,11 +49,11 @@ type Transfer @entity {
   """
   The account that transfers are made from
   """
-  from: Account!
+  from: Account! @index
   """
   The account that transfers are made to
   """
-  to: Account!
+  to: Account! @index
 }
 
 type Account @entity {
@@ -97,7 +97,7 @@ type MultiOrigin @entity {
   """
   The linked account in case of originVariant==Acurast
   """
-  account: Account
+  account: Account @index
 
   allowedAsConsumer: [AdAllowsConsumer!] @derivedFrom(field: "consumer")
 }
@@ -110,13 +110,13 @@ type AdAllowsConsumer @entity {
 
 type Advertisement @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   """
-  The block height of the first encounter
+  The block height of the creation/update
   """
   blockNumber: Int! @index
   """
-  The timestamp of the first encounter
+  The timestamp of the creation/update
   """
   timestamp: Date! @index
 
@@ -139,13 +139,13 @@ type Advertisement @entity {
 
 type Heartbeat @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   """
-  The block height of the first encounter
+  The block height of the encounter
   """
   blockNumber: Int! @index
   """
-  The timestamp of the first encounter
+  The timestamp of the encounter
   """
   timestamp: Date! @index
 
@@ -155,13 +155,13 @@ type Heartbeat @entity {
 
 type ProcessorReward @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   """
-  The block height of the first encounter
+  The block height of the encounter
   """
   blockNumber: Int! @index
   """
-  The timestamp of the first encounter
+  The timestamp of the encounter
   """
   timestamp: Date! @index
   amount: BigInt!
@@ -176,13 +176,13 @@ type RemainingStorageCapacity @entity {
 
 type Attestation @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   """
-  The block height of the first encounter
+  The block height of the encounter
   """
   blockNumber: Int! @index
   """
-  The timestamp of the first encounter
+  The timestamp of the encounter
   """
   timestamp: Date! @index
 
@@ -199,12 +199,8 @@ enum SchedulingWindowVariant {
 
 type Job @entity {
   id: ID!
-  # fields building the unique job_id
-  origin: Bytes! @index(unique: true)
-  originVariant: MultiOriginVariant!
-  # link to Account entity if it's an Acurast address that registered
-  originAccount: Account
-  jobIdSeq: BigInt! @index(unique: true)
+  multiOrigin: MultiOrigin! @index
+  jobIdSeq: BigInt! @index
 
   script: String!
   allowedProcessors: [JobAllowsProcessor!] @derivedFrom(field: "job")
@@ -241,7 +237,7 @@ enum AssignmentStrategy {
 
 type JobAllowsProcessor @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   job: Job!
 }
 
@@ -290,7 +286,7 @@ type Assignment @entity {
 
 type Match @entity {
   id: ID!
-  processor: Account!
+  processor: Account! @index
   job: Job!
 
   slot: Int!
@@ -366,11 +362,9 @@ type Manager @entity {
   """
   One-to-one relation, nullable on account so that all of this type's fields are mandatory if a manager was created for account.
   """
-  account: Account!
-  managedProcessors: [Account!]! @derivedFrom(field: "manager")
+  account: Account! @index
+  managedProcessors: [Account!]! @derivedFrom(field: "manager") @index
   managerId: BigInt!
-
-  processors: [Account!]! @derivedFrom(field: "manager")
 
   """
   The block height when the manager was created

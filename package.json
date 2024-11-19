@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "subql codegen && subql build",
-    "start": "subql-node --batch-size=20 --db-schema=public",
-    "start:local": "dotenv -e .env -- subql-node --batch-size=20 --db-schema=public",
+    "start": "subql-node --disable-historical=true --batch-size=20 --db-schema=public",
+    "start:local": "dotenv -e .env -- subql-node ---disable-historical=true -batch-size=20 --db-schema=public",
     "explorer:local": "dotenv -e .env -- npx @subql/query@2.15.2 --playground --subscription -n public",
     "codegen": "subql codegen",
     "start:docker": "docker-compose pull && docker-compose up --remove-orphans",

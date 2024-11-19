@@ -21,6 +21,7 @@ export async function handleManagerCreatedEvent(
   if (manager) {
     return;
   }
+  await getOrCreateAccount(managerAddress, true);
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   await Manager.create({
@@ -79,7 +80,7 @@ export async function handleProcessorPairingsUpdatedEvent(
   for (const u of pairingUpdatesCodec as any) {
     // get the ss58 address of the processor
     const processorAddress = u.item.account.toString();
-    const processor = await getOrCreateAccount(processorAddress);
+    const processor = await getOrCreateAccount(processorAddress, true);
     if (u.operation.isAdd) {
       processor.managerId = manager.id;
       await processor.save();
