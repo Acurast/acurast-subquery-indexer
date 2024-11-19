@@ -141,16 +141,24 @@ type Heartbeat @entity {
   id: ID!
   processor: Account! @index
   """
-  The block height of the encounter
+  The block height of the first encounter
   """
   blockNumber: Int! @index
   """
-  The timestamp of the encounter
+  The timestamp of the first encounter
   """
   timestamp: Date! @index
+  """
+  The block height of the latest encounter
+  """
+  latestBlockNumber: Int! @index
+  """
+  The timestamp of the latest encounter
+  """
+  latestTimestamp: Date! @index
 
   platform: Int @index
-  build_number: Int @index
+  buildNumber: Int @index
 }
 
 type ProcessorReward @entity {

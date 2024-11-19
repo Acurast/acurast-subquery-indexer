@@ -111,17 +111,38 @@ export async function handleProcessorHeartbeatEvent(
   const processorAddress = processorCodec.toString();
 
   const blockNumber: number = event.block.block.header.number.toNumber();
+  const timestamp = event.block.timestamp!;
 
-  const processor = await getOrCreateAccount(processorAddress);
+  const processor = await getOrCreateAccount(processorAddress, true);
 
-  const heartbeat = Heartbeat.create({
-    id: `${blockNumber}-${event.idx}`,
-    processorId: processor.id,
-    blockNumber,
-    timestamp: event.block.timestamp!,
-  });
+  // get most recent heartbeat seen
+  let latestHeartbeat = (
+    await Heartbeat.getByFields([["processorId", "=", processor.id]], {
+      limit: 1,
+      orderBy: "blockNumber",
+      orderDirection: "DESC",
+    })
+  ).at(0);
 
-  await Promise.all([heartbeat.save(), processor.save()]);
+  // update if smaller than 20 minutes difference
+  if (
+    latestHeartbeat &&
+    timestamp.getTime() >= latestHeartbeat.latestTimestamp.getTime() &&
+    timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 1200000
+  ) {
+    latestHeartbeat.latestBlockNumber = blockNumber,
+    latestHeartbeat.latestTimestamp = timestamp,
+    await latestHeartbeat.save();
+  } else {
+    await Heartbeat.create({
+      id: `${blockNumber}-${event.idx}`,
+      processorId: processor.id,
+      blockNumber,
+      timestamp,
+      latestBlockNumber: blockNumber,
+      latestTimestamp: timestamp,
+    }).save();
+  }
 }
 
 export async function handleProcessorHeartbeatWithVersionEvent(
@@ -140,20 +161,51 @@ export async function handleProcessorHeartbeatWithVersionEvent(
   const processorAddress = processorCodec.toString();
 
   const blockNumber: number = event.block.block.header.number.toNumber();
+  const timestamp = event.block.timestamp!;
+  
   const data = codec as any;
+  const platform = data.platform.toNumber();
+  const buildNumber = data.buildNumber.toNumber();
 
-  const processor = await getOrCreateAccount(processorAddress);
+  const processor = await getOrCreateAccount(processorAddress, true);
 
-  const heartbeat = Heartbeat.create({
-    id: `${blockNumber}-${event.idx}`,
-    processorId: processor.id,
-    blockNumber,
-    timestamp: event.block.timestamp!,
-    platform: data.platform.toNumber(),
-    build_number: data.buildNumber.toNumber(),
-  });
+  // get most recent heartbeat seen
+  let latestHeartbeat = (
+    await Heartbeat.getByFields(
+      [
+        ["processorId", "=", processor.id],
+        ["platform", "=", platform],
+        ["buildNumber", "=", buildNumber],
+      ],
+      {
+        limit: 1,
+        orderBy: "blockNumber",
+        orderDirection: "DESC",
+      }
+    )
+  ).at(0);
 
-  await Promise.all([heartbeat.save(), processor.save()]);
+  // update if smaller than 20 minutes difference
+  if (
+    latestHeartbeat &&
+    timestamp.getTime() >= latestHeartbeat.latestTimestamp.getTime() &&
+    timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 1200000
+  ) {
+    latestHeartbeat.latestBlockNumber = blockNumber,
+    latestHeartbeat.latestTimestamp = timestamp,
+    await latestHeartbeat.save();
+  } else {
+    await Heartbeat.create({
+      id: `${blockNumber}-${event.idx}`,
+      processorId: processor.id,
+      blockNumber,
+      timestamp,
+      latestBlockNumber: blockNumber,
+      latestTimestamp: timestamp,
+      platform,
+      buildNumber,
+    }).save();
+  }
 }
 
 export async function handleProcessorRewardSentEvent(
