@@ -313,6 +313,9 @@ export async function handleJobRegistrationStoredEvent(
     script = new TextDecoder("utf-8", { ignoreBOM: true }).decode(
       data.script.toU8a()
     );
+    if (script.length) {
+      script = script.slice(1);
+    }
   } catch (e) {
     script = data.script.toHex();
   }

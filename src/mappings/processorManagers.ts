@@ -130,9 +130,9 @@ export async function handleProcessorHeartbeatEvent(
     timestamp.getTime() >= latestHeartbeat.latestTimestamp.getTime() &&
     timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 1200000
   ) {
-    latestHeartbeat.latestBlockNumber = blockNumber,
-    latestHeartbeat.latestTimestamp = timestamp,
-    await latestHeartbeat.save();
+    (latestHeartbeat.latestBlockNumber = blockNumber),
+      (latestHeartbeat.latestTimestamp = timestamp),
+      await latestHeartbeat.save();
   } else {
     await Heartbeat.create({
       id: `${blockNumber}-${event.idx}`,
@@ -162,7 +162,7 @@ export async function handleProcessorHeartbeatWithVersionEvent(
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   const timestamp = event.block.timestamp!;
-  
+
   const data = codec as any;
   const platform = data.platform.toNumber();
   const buildNumber = data.buildNumber.toNumber();
@@ -191,9 +191,9 @@ export async function handleProcessorHeartbeatWithVersionEvent(
     timestamp.getTime() >= latestHeartbeat.latestTimestamp.getTime() &&
     timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 1200000
   ) {
-    latestHeartbeat.latestBlockNumber = blockNumber,
-    latestHeartbeat.latestTimestamp = timestamp,
-    await latestHeartbeat.save();
+    (latestHeartbeat.latestBlockNumber = blockNumber),
+      (latestHeartbeat.latestTimestamp = timestamp),
+      await latestHeartbeat.save();
   } else {
     await Heartbeat.create({
       id: `${blockNumber}-${event.idx}`,
@@ -227,6 +227,7 @@ export async function handleProcessorRewardSentEvent(
   } = event;
 
   const processorAddress = processorCodec.toString();
+  await getOrCreateAccount(processorAddress, true);
   await ProcessorReward.create({
     id: `${blockNumber}-${event.idx}`,
     processorId: processorAddress,
