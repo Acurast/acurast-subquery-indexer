@@ -2,11 +2,10 @@ import { Codec } from "@polkadot/types-codec/types";
 import { u8aToHex } from "@polkadot/util";
 import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
 import { JobId, MultiOriginProps } from "./mappings/convert";
-import { Account, MultiOrigin, MultiOriginVariant } from "./types";
+import { Account, Job, MultiOrigin, MultiOriginVariant } from "./types";
 
 export async function getOrCreateAccount(
-  address: Codec | string,
-  save?: boolean
+  address: Codec | string
 ): Promise<Account> {
   const id = typeof address === "string" ? address : address.toString(); // id is ss58 address
   let account = await Account.get(id);
@@ -16,9 +15,7 @@ export async function getOrCreateAccount(
       id,
       publicKey: u8aToHex(decodeAddress(id)),
     });
-    if (save) {
-      await account.save();
-    }
+    await account.save();
   }
   return account;
 }
@@ -44,7 +41,7 @@ export async function getOrCreateMultiOrigin(
       case MultiOriginVariant.Acurast:
         const address = encodeAddress(origin, 42);
 
-        const account = await getOrCreateAccount(address, true);
+        const account = await getOrCreateAccount(address);
 
         multiOrigin = MultiOrigin.create({
           // use the account address here for faster filtering on related entities
@@ -81,6 +78,7 @@ export async function getOrCreateMultiOrigin(
         });
         break;
     }
+    await multiOrigin.save();
   }
   return multiOrigin;
 }
@@ -107,4 +105,20 @@ export function multiOriginPrefix(
     default:
       throw Error(`Unknown JobId variant: ${variant}`);
   }
+}
+
+export async function getOrCreateJob(jobId: JobId): Promise<Job> {
+  const id = jobIdToString(jobId);
+  let job = await Job.get(id);
+  if (!job) {
+    // We couldn't find the jobId
+    const multiOrigin = await getOrCreateMultiOrigin(jobId[0]);
+    job = Job.create({
+      id,
+      multiOriginId: multiOrigin.id,
+      jobIdSeq: jobId[1],
+    });
+    await job.save();
+  }
+  return job;
 }

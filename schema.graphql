@@ -210,6 +210,17 @@ type Job @entity {
   multiOrigin: MultiOrigin! @index
   jobIdSeq: BigInt! @index
 
+  statusChanges: [JobStatusChange!]! @derivedFrom(field: "job")
+  matches: [Match!]! @derivedFrom(field: "job")
+  assignments: [Assignment!]! @derivedFrom(field: "job")
+  reports: [Report!]! @derivedFrom(field: "job")
+  finalizations: [Finalization!]! @derivedFrom(field: "job")
+}
+
+type JobData @entity {
+  id: ID!
+  jobId: Job! @index
+
   script: String!
   allowedProcessors: [JobAllowsProcessor!] @derivedFrom(field: "job")
   allowOnlyVerifiedProcessors: Boolean!
@@ -230,12 +241,6 @@ type Job @entity {
   reward: BigInt!
   minReputation: BigInt
   assignmentStrategy: AssignmentStrategy!
-
-  matches: [Match!]! @derivedFrom(field: "job")
-
-  # redundant field for fast filtering by status
-  status: JobStatus!
-  statusChanges: [JobStatusChange!]! @derivedFrom(field: "job")
 }
 
 enum AssignmentStrategy {
@@ -246,12 +251,12 @@ enum AssignmentStrategy {
 type JobAllowsProcessor @entity {
   id: ID!
   processor: Account! @index
-  job: Job!
+  job: Job! @index
 }
 
 type JobStatusChange @entity {
   id: ID!
-  job: Job!
+  job: Job! @index
   """
   The block height of the status change
   """
@@ -272,7 +277,8 @@ enum JobStatus {
 
 type Assignment @entity {
   id: ID!
-  match: Match!
+  processor: Account! @index
+  job: Job! @index
 
   feePerExecution: BigInt!
 
@@ -287,15 +293,12 @@ type Assignment @entity {
   The timestamp of the assignment (match acknowledgment)
   """
   timestamp: Date! @index
-
-  reports: [Report!]! @derivedFrom(field: "assignment")
-  finalizations: [Finalization!]! @derivedFrom(field: "assignment")
 }
 
 type Match @entity {
   id: ID!
   processor: Account! @index
-  job: Job!
+  job: Job! @index
 
   slot: Int!
   """
@@ -314,8 +317,6 @@ type Match @entity {
   The timestamp of the match; can be identical to job.timestamp for instant matches
   """
   timestamp: Date! @index
-
-  assignments: [Assignment!]! @derivedFrom(field: "match")
 }
 
 type SLA @jsonField {
@@ -333,7 +334,8 @@ type PubKeys @jsonField {
 
 type Report @entity {
   id: ID!
-  assignment: Assignment!
+  processor: Account! @index
+  job: Job! @index
   """
   The block height of the report
   """
@@ -354,7 +356,8 @@ enum ReportVariant {
 
 type Finalization @entity {
   id: ID!
-  assignment: Assignment!
+  processor: Account! @index
+  job: Job! @index
   """
   The block height of the report
   """

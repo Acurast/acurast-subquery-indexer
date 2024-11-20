@@ -21,7 +21,7 @@ export async function handleManagerCreatedEvent(
   if (manager) {
     return;
   }
-  await getOrCreateAccount(managerAddress, true);
+  await getOrCreateAccount(managerAddress);
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   await Manager.create({
@@ -80,7 +80,7 @@ export async function handleProcessorPairingsUpdatedEvent(
   for (const u of pairingUpdatesCodec as any) {
     // get the ss58 address of the processor
     const processorAddress = u.item.account.toString();
-    const processor = await getOrCreateAccount(processorAddress, true);
+    const processor = await getOrCreateAccount(processorAddress);
     if (u.operation.isAdd) {
       processor.managerId = manager.id;
       await processor.save();
@@ -113,7 +113,7 @@ export async function handleProcessorHeartbeatEvent(
   const blockNumber: number = event.block.block.header.number.toNumber();
   const timestamp = event.block.timestamp!;
 
-  const processor = await getOrCreateAccount(processorAddress, true);
+  const processor = await getOrCreateAccount(processorAddress);
 
   // get most recent heartbeat seen
   let latestHeartbeat = (
@@ -167,7 +167,7 @@ export async function handleProcessorHeartbeatWithVersionEvent(
   const platform = data.platform.toNumber();
   const buildNumber = data.buildNumber.toNumber();
 
-  const processor = await getOrCreateAccount(processorAddress, true);
+  const processor = await getOrCreateAccount(processorAddress);
 
   // get most recent heartbeat seen
   let latestHeartbeat = (
@@ -227,7 +227,7 @@ export async function handleProcessorRewardSentEvent(
   } = event;
 
   const processorAddress = processorCodec.toString();
-  await getOrCreateAccount(processorAddress, true);
+  await getOrCreateAccount(processorAddress);
   await ProcessorReward.create({
     id: `${blockNumber}-${event.idx}`,
     processorId: processorAddress,

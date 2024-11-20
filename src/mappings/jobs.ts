@@ -6,6 +6,7 @@ import {
   Finalization,
   Job,
   JobAllowsProcessor,
+  JobData,
   JobStatus,
   JobStatusChange,
   Match,
@@ -15,6 +16,7 @@ import {
 } from "../types";
 import {
   getOrCreateAccount,
+  getOrCreateJob as getOrCreateJob,
   getOrCreateMultiOrigin,
   jobIdToString,
 } from "../utils";
@@ -42,14 +44,9 @@ export async function handleMatchedEvents(
 
   const data = codec as any;
   const jobId = await codecToJobId(data.jobId);
-  const id = jobIdToString(jobId);
+  const job = await getOrCreateJob(jobId);
 
   const blockNumber: number = event.block.block.header.number.toNumber();
-
-  let job = await Job.get(id);
-  if (!job) {
-    return;
-  }
 
   const promises: Promise<any>[] = [];
   for (const [index, match] of (data.sources as any).entries()) {
@@ -76,16 +73,16 @@ export async function handleMatchedEvents(
       }).save()
     );
   }
-  job.status = JobStatus.Matched;
+
   const change = JobStatusChange.create({
     id: `${job.id}-${blockNumber}-${event.idx}`,
     jobId: job.id,
     blockNumber,
     timestamp: event.block.timestamp!,
-    status: job.status,
+    status: JobStatus.Matched,
   });
 
-  await Promise.all([job.save(), change.save(), ...promises]);
+  await Promise.all([change.save(), ...promises]);
 }
 
 export async function handleJobRegistrationAssignedEvent(
@@ -101,12 +98,7 @@ export async function handleJobRegistrationAssignedEvent(
     },
   } = event;
 
-  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
-
-  let job = await Job.get(jobId);
-  if (!job) {
-    return;
-  }
+  let job = await getOrCreateJob(await codecToJobId(jobIdCodec));
 
   const assignment = codecToJobAssignment(assignmentCodec);
   const processorAddress = processorCodec.toString();
@@ -116,23 +108,24 @@ export async function handleJobRegistrationAssignedEvent(
   const id = assignment.execution
     ? `${job.id}-${processorAddress}-${assignment.execution}`
     : `${job.id}-${processorAddress}`;
+
   const assignmentEntity = Assignment.create({
     // since it's a one-to-one relation
     id,
-    matchId: id,
+    processorId: processorAddress,
+    jobId: job.id,
     feePerExecution: assignment.feePerExecution,
     sla: assignment.sla,
     pubKeys: pubKeyToPubKeyEntity(assignment.pubKeys),
     blockNumber,
     timestamp,
   });
-  job.status = JobStatus.Assigned;
   const change = JobStatusChange.create({
     id: `${job.id}-${blockNumber}-${event.idx}`,
     jobId: job.id,
     blockNumber,
     timestamp,
-    status: job.status,
+    status: JobStatus.Assigned,
   });
 
   await Promise.all([job.save(), change.save(), assignmentEntity.save()]);
@@ -151,12 +144,7 @@ export async function handleReportedEvent(
     },
   } = event;
 
-  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
-
-  let job = await Job.get(jobId);
-  if (!job) {
-    return;
-  }
+  let job = await getOrCreateJob(await codecToJobId(jobIdCodec));
 
   const assignment = codecToJobAssignment(assignmentCodec);
   const processorAddress = processorCodec.toString();
@@ -165,6 +153,7 @@ export async function handleReportedEvent(
   const id = assignment.execution
     ? `${job.id}-${processorAddress}-${assignment.execution}`
     : `${job.id}-${processorAddress}`;
+  await getOrCreateAccount(processorAddress);
 
   // retrieve execution result over extrinsic
   logger.info(JSON.stringify(event.extrinsic!.extrinsic.method.toHuman()));
@@ -174,8 +163,9 @@ export async function handleReportedEvent(
   const executionResult = exExecutionResultCodec as any;
   if (executionResult.isSuccess) {
     await Report.create({
-      id,
-      assignmentId: id,
+      id: `${blockNumber}-${event.idx}`,
+      processorId: processorAddress,
+      jobId: job.id,
       blockNumber,
       timestamp,
       variant: ReportVariant.Success,
@@ -184,7 +174,8 @@ export async function handleReportedEvent(
   } else if (executionResult.isFailure) {
     await Report.create({
       id,
-      assignmentId: id,
+      processorId: processorAddress,
+      jobId: job.id,
       blockNumber,
       timestamp,
       variant: ReportVariant.Failure,
@@ -210,12 +201,7 @@ export async function handleJobFinalizedEvent(
     },
   } = event;
 
-  const jobId = jobIdToString(await codecToJobId(jobIdCodec));
-
-  let job = await Job.get(jobId);
-  if (!job) {
-    return;
-  }
+  let job = await getOrCreateJob(await codecToJobId(jobIdCodec));
 
   const blockNumber: number = event.block.block.header.number.toNumber();
   const timestamp = event.block.timestamp!;
@@ -225,32 +211,12 @@ export async function handleJobFinalizedEvent(
   logger.info(event.extrinsic!.extrinsic.signer.toString());
   logger.info(JSON.stringify(event.extrinsic!.extrinsic.signer.toJSON()));
 
-  const matchId = `${job.id}-${processorAddress}`;
-  const match = await Match.get(matchId);
-  if (!match) {
-    return;
-  }
-
-  // get latest assignment
-  // TODO: improve since this is sensitive to order of block indexed and only correct if sequential (breaks e.g. if chunks of blocks are reindexed)
-  const assignment = (
-    await Assignment.getByFields([["matchId", "=", matchId]], {
-      limit: 1,
-      orderBy: "blockNumber",
-      orderDirection: "DESC",
-    })
-  ).at(0);
-  if (!assignment) {
-    return;
-  }
-
-  const id = match.execution
-    ? `${job.id}-${processorAddress}-${match.execution}`
-    : `${job.id}-${processorAddress}`;
+  const id = `${job.id}-${processorAddress}`;
 
   await Finalization.create({
     id,
-    assignmentId: assignment.id,
+    processorId: processorAddress,
+    jobId: job.id,
     blockNumber,
     timestamp,
   }).save();
@@ -292,14 +258,14 @@ export async function handleJobRegistrationStoredEvent(
   } = event;
 
   const jobId = await codecToJobId(jobIdCodec);
-  const id = jobIdToString(jobId);
-  const multiOrigin = await getOrCreateMultiOrigin(jobId[0]);
+  const job = await getOrCreateJob(jobId);
 
   const data = jobRegistrationCodec as any;
   const blockNumber: number = event.block.block.header.number.toNumber();
 
-  let job = await Job.get(id);
-  if (job) {
+  let jobData = await JobData.get(job.id);
+  if (jobData) {
+    // Don't reindex since job data is immutable (except status field which is always Open on registration)
     return;
   }
   let matchs: Match[] = [];
@@ -320,10 +286,9 @@ export async function handleJobRegistrationStoredEvent(
     script = data.script.toHex();
   }
 
-  job = Job.create({
-    id,
-    multiOriginId: multiOrigin.id,
-    jobIdSeq: jobId[1],
+  jobData = JobData.create({
+    id: job.id,
+    jobIdId: job.id,
 
     script,
     allowOnlyVerifiedProcessors: data.allowOnlyVerifiedSources.toJSON(),
@@ -350,8 +315,6 @@ export async function handleJobRegistrationStoredEvent(
       ?.toBigInt(),
 
     assignmentStrategy,
-
-    status: JobStatus.Open,
   });
 
   const allowedProcessors: JobAllowsProcessor[] = [];
@@ -360,15 +323,15 @@ export async function handleJobRegistrationStoredEvent(
     for (const allowedProcessor of data.allowedSources.unwrap()) {
       const processorAddress = allowedProcessor.toString();
       const processor = await getOrCreateAccount(processorAddress);
-      const id = `${job.id}-${processorAddress}`;
+      const id = `${jobData.id}-${processorAddress}`;
       // the runtime makes sure we do not save duplicates but still returns all updates (with potential duplicates) so we check for existence
       if (!(await JobAllowsProcessor.get(id))) {
         // only push if JobAllowsProcessor did not yet exist
         processors.push(processor);
         allowedProcessors.push(
           JobAllowsProcessor.create({
-            id: `${job.id}-${processorAddress}`,
-            jobId: job.id,
+            id: `${jobData.id}-${processorAddress}`,
+            jobId: jobData.id,
             processorId: processor.id,
           })
         );
@@ -376,18 +339,18 @@ export async function handleJobRegistrationStoredEvent(
     }
   }
   const change = JobStatusChange.create({
-    id: `${job.id}-${blockNumber}-${event.idx}`,
-    jobId: job.id,
+    id: `${jobData.id}-${blockNumber}-${event.idx}`,
+    jobId: jobData.id,
     blockNumber,
     timestamp: event.block.timestamp!,
-    status: job.status,
+    status: JobStatus.Open,
   });
   if (assignmentStrategy == AssignmentStrategy.Single && instantMatch) {
     matchs = instantMatch.map((match, index: number) => {
       return Match.create({
-        id: `${job.id}-${match.source}`,
-        processorId: match.source,
-        jobId: job.id,
+        id: `${jobData.id}-${match.processor}`,
+        processorId: match.processor,
+        jobId: jobData.id,
         slot: index,
         execution: undefined, // since this event is matching all executions
         startDelay: match.startDelay,
@@ -399,8 +362,7 @@ export async function handleJobRegistrationStoredEvent(
   }
 
   await Promise.all([
-    job.save(),
-    multiOrigin.save(),
+    jobData.save(),
     change.save(),
     ...matchs.map((e) => e.save()),
     ...processors.map((s) => s.save()),
@@ -461,7 +423,7 @@ export async function handleAllowedSourcesUpdatedEvent(
 }
 
 export type MatchProps = {
-  source: string;
+  processor: string;
   startDelay: bigint;
 };
 
@@ -478,25 +440,14 @@ export async function handleJobRegistrationRemovedEvent(
     },
   } = event;
 
-  const jobId = await codecToJobId(jobIdCodec);
-  const id = jobIdToString(jobId);
   const blockNumber: number = event.block.block.header.number.toNumber();
 
-  let job = await Job.get(id);
-  if (job) {
-    job.status = JobStatus.Removed;
-    const change = JobStatusChange.create({
-      id: `${job.id}-${blockNumber}-${event.idx}`,
-      jobId: job.id,
-      blockNumber,
-      timestamp: event.block.timestamp!,
-      status: job.status,
-    });
-
-    await Promise.all([job.save(), change.save()]);
-  } else {
-    logger.warn(
-      `JobRegistrationRemoved event skipped for ${id} at block ${event.block.block.header.number.toString()}`
-    );
-  }
+  let job = await getOrCreateJob(await codecToJobId(jobIdCodec));
+  await JobStatusChange.create({
+    id: `${job.id}-${blockNumber}-${event.idx}`,
+    jobId: job.id,
+    blockNumber,
+    timestamp: event.block.timestamp!,
+    status: JobStatus.Removed,
+  }).save();
 }
