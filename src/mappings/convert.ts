@@ -126,10 +126,13 @@ export function codecToAssignmentStrategy(codec: Codec): {
   if (data.isSingle) {
     return {
       assignmentStrategy: AssignmentStrategy.Single,
-      instantMatch: data.asSingle.unwrapOr(undefined)?.map((value: any) => ({
-        source: value.source.toString(),
-        startDelay: value.startDelay.toBigInt(),
-      })),
+      instantMatch: data.asSingle.unwrapOr(undefined)?.map(
+        (value: any) =>
+          ({
+            processor: value.source.toString(),
+            startDelay: value.startDelay.toBigInt(),
+          } as MatchProps)
+      ),
     };
   } else if (data.isCompeting) {
     return { assignmentStrategy: AssignmentStrategy.Competing };
