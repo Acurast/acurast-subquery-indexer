@@ -12,16 +12,16 @@ spec:
       labels:
         app: postgres
     spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 1
-              preference:
-                matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - gke-acurast-prod-highcpu-pool-1-cc9066a5-oef3
+      # affinity:
+      #   nodeAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #       - weight: 1
+      #         preference:
+      #           matchExpressions:
+      #             - key: kubernetes.io/hostname
+      #               operator: In
+      #               values:
+      #                 - gke-acurast-prod-highcpu-pool-1-cc9066a5-oef3
       containers:
         - name: postgres
           image: postgres:16-alpine

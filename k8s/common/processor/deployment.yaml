@@ -19,16 +19,16 @@ spec:
       labels:
         app: processor
     spec:
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 1
-              preference:
-                matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - gke-acurast-prod-highcpu-pool-1-cc9066a5-oef3
+      # affinity:
+      #   nodeAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #       - weight: 1
+      #         preference:
+      #           matchExpressions:
+      #             - key: kubernetes.io/hostname
+      #               operator: In
+      #               values:
+      #                 - gke-acurast-prod-highcpu-pool-1-cc9066a5-oef3
       containers:
         - name: processor
           image: __TO_BE_REPLACED_BY_IMAGE_TAG__
@@ -58,7 +58,5 @@ spec:
             limits:
               cpu: "1"
               memory: 1000M
-      imagePullSecrets:
-        - name: regsecret
       restartPolicy: Always
 status: {}
