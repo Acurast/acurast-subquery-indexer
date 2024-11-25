@@ -128,7 +128,7 @@ export async function handleProcessorHeartbeatEvent(
   if (
     latestHeartbeat &&
     timestamp.getTime() >= latestHeartbeat.latestTimestamp.getTime() &&
-    timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 1200000
+    timestamp.getTime() - latestHeartbeat.latestTimestamp.getTime() < 2100000
   ) {
     (latestHeartbeat.latestBlockNumber = blockNumber),
       (latestHeartbeat.latestTimestamp = timestamp),
