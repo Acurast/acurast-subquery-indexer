@@ -1,5 +1,7 @@
 # Example queries
 
+## Graphql
+
 ### Stats over processed events
 
 ```graphql
@@ -28,7 +30,7 @@ query {
 }
 ```
 
-### Assignments and their fee per execution over time
+### Matches where there are also assignments for same job
 
 ```graphql
 query {
@@ -36,10 +38,20 @@ query {
     nodes {
       id
       feePerExecution
-      match {
-        jobId
-        processorId
+      job {
+        jobDataByJobIdId {
+          nodes {
+            startTime
+            endTime
+          }
+        }
+        matches {
+          nodes {
+            id
+          }
+        }
       }
+      
       timestamp
       blockNumber
     }
@@ -51,13 +63,9 @@ query {
 
 ```graphql
 query {
-  jobs(filter: {originVariant: {notEqualTo: Acurast}}) {
+  jobs(filter: {multiOrigin: {originVariant: {notEqualTo: Acurast}}}) {
     nodes {
       id
-      duration
-      status
-      script
-      originVariant
     }
   }
 }
@@ -67,15 +75,16 @@ query {
 
 ```graphql
 query {
-  job(id: "Acurast#1202") {
+  jobs(filter: {matches: {some: {instant: {equalTo: true}}}}) {
+    nodes {
       id
-      status
       matches {
         nodes {
           id
+          instant
           processor {
             id
-            heartbeats {
+            heartbeats(last: 1) {
               nodes {
                 blockNumber
                 buildNumber
@@ -84,41 +93,47 @@ query {
           }
         }
       }
+    }
   }
 }
 ```
 
-### Filter finalized jobs
+## Postgres SQL
 
-```graphql
-query  {
-  jobs(filter: {matchesExist:true, matches: {every: {assignmentsExist:true, assignments: {every: {finalizationsExist: true}}}}}) {
-    nodes {
-      id
-      status
-      statusChanges {
-        nodes {
-          status
-          blockNumber
-        }
-      }
-      matches {
-        nodes {
-          assignments {
-            nodes {
-              id
-              pubKeys
-              finalizations {
-                nodes {
-                  id
-                  blockNumber
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
+### Heartbeats per day over given time period
+```sql
+WITH date_range AS (
+    SELECT generate_series(
+        DATE '2024-11-01', 
+        DATE '2024-11-20', 
+        '1 day'::interval
+    ) AS day
+)
+SELECT 
+    dr.day as "time",
+    COUNT(DISTINCT h.processor_id) AS heartbeating_processor_count
+FROM 
+    date_range dr
+LEFT JOIN 
+    heartbeats h
+ON 
+    dr.day BETWEEN DATE_TRUNC('day', h.timestamp) AND DATE_TRUNC('day', h.latest_timestamp)
+GROUP BY 
+    dr.day
+HAVING 
+    COUNT(DISTINCT h.processor_id) > 0
+ORDER BY 
+    dr.day;
+```
+
+**HINT**: the filtering for specific range of days is usefule for grafana timeseries graphs; E.g. this is how to filter by dynamic range of currently displayed timespan:
+
+```sql
+WITH date_range AS (
+    SELECT generate_series(
+        DATE '${__from:date:YYYY-MM-DD}', 
+        DATE '${__to:date:YYYY-MM-DD}', 
+        '1 day'::interval
+    ) AS day
+)
 ```
