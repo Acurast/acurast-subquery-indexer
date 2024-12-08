@@ -242,6 +242,19 @@ const project: SubstrateProject = {
         ],
       },
     },
+    {
+      kind: SubstrateDatasourceKind.Runtime,
+      startBlock: 3149629,
+      mapping: {
+        file: "./dist/index.js",
+        handlers: [
+          {
+            kind: SubstrateHandlerKind.Call,
+            handler: "handleCall",
+          },
+        ],
+      },
+    },
   ],
 };
 

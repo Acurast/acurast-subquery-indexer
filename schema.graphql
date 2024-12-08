@@ -386,3 +386,33 @@ type Manager @entity {
   """
   timestamp: Date! @index
 }
+
+type Extrinsic @entity {
+  id: ID!
+  section: Int! @index
+  method: Int! @index
+  data: Bytes!
+  """
+  One-to-one relation, nullable on account so that all of this type's fields are mandatory if a manager was created for account.
+  """
+  account: Account! @index
+  args: String!
+  success: Boolean!
+  events: [RuntimeEvent!]!
+  """
+  The block height when the call to the extrinsic was submitted
+  """
+  blockNumber: Int! @index
+  """
+  The timestamp when the call to the extrinsic was submitted
+  """
+  timestamp: Date! @index
+}
+
+type RuntimeEvent @jsonField {
+  """
+  Corresponds to event index (does not need to be globally unique, i.e. no block number prefix needed since it's inlined in column of Extrinsic)
+  """
+  idx: Bytes!
+  data: String!
+}
