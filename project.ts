@@ -16,6 +16,213 @@ const dotenvPath = path.resolve(
 );
 dotenv.config({ path: dotenvPath });
 
+const rawHandlers = {
+  kind: SubstrateDatasourceKind.Runtime,
+  startBlock: parseInt(process.env.RAW_DATA_START_BLOCK ?? "1303200"),
+  mapping: {
+    file: "./dist/index.js",
+    handlers: [
+      {
+        kind: SubstrateHandlerKind.Call,
+        handler: "handleCall",
+      },
+    ],
+  },
+};
+
+const purifyHandlers = {
+  kind: SubstrateDatasourceKind.Runtime,
+  startBlock: parseInt(process.env.PURIFY_DATA_START_BLOCK ?? "1303200"),
+  mapping: {
+    file: "./dist/index.js",
+    handlers: [
+      /*{
+            kind: SubstrateHandlerKind.Block,
+            handler: "handleBlock",
+            filter: {
+              modulo: 100,
+            },
+          },*/
+      /*{
+            kind: SubstrateHandlerKind.Call,
+            handler: "handleCall",
+            filter: {
+              module: "balances",
+            },
+          },*/
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleTransferEvent",
+        filter: {
+          module: "balances",
+          method: "Transfer",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleJobRegistrationStoredEvent",
+        filter: {
+          module: "acurast",
+          method: "JobRegistrationStored",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleAllowedSourcesUpdatedEvent",
+        filter: {
+          module: "acurast",
+          method: "AllowedSourcesUpdated",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleJobRegistrationRemovedEvent",
+        filter: {
+          module: "acurast",
+          method: "JobRegistrationRemoved",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleAttestationStoredEvent",
+        filter: {
+          module: "acurast",
+          method: "AttestationStored",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleAdvertisementStoredEvent",
+        filter: {
+          module: "acurastMarketplace",
+          method: "AdvertisementStored",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleAdvertisementRemovedEvent",
+        filter: {
+          module: "acurastMarketplace",
+          method: "handleAdvertisementRemovedEvent",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleMatchedEvents",
+        filter: {
+          module: "acurastMarketplace",
+          method: "JobRegistrationMatched",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleMatchedEvents",
+        filter: {
+          module: "acurastMarketplace",
+          method: "JobExecutionMatched",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleJobRegistrationAssignedEvent",
+        filter: {
+          module: "acurastMarketplace",
+          method: "JobRegistrationAssigned",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleReportedEvent",
+        filter: {
+          module: "acurastMarketplace",
+          method: "Reported",
+        },
+      },
+      // this events are currently not processed since we derive execution result from extrinsic actual parameters upon a `acurastMarketplace.Reported` event
+      //   {
+      //     kind: SubstrateHandlerKind.Event,
+      //     handler: "handleExecutionSuccessEvent",
+      //     filter: {
+      //       module: "acurastMarketplace",
+      //       method: "ExecutionSuccess",
+      //     },
+      //   },
+      //   {
+      //     kind: SubstrateHandlerKind.Event,
+      //     handler: "handleExecutionFailureEvent",
+      //     filter: {
+      //       module: "acurastMarketplace",
+      //       method: "ExecutionFailure",
+      //     },
+      //   },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleJobFinalizedEvent",
+        filter: {
+          module: "acurastMarketplace",
+          method: "JobFinalized",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorAdvertisementEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorAdvertisement",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorHeartbeatEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorHeartbeat",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorHeartbeatWithVersionEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorHeartbeatWithVersion",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleManagerCreatedEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ManagerCreated",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorPairedEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorPaired",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorPairingsUpdatedEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorPairingsUpdated",
+        },
+      },
+      {
+        kind: SubstrateHandlerKind.Event,
+        handler: "handleProcessorRewardSentEvent",
+        filter: {
+          module: "acurastProcessorManager",
+          method: "ProcessorRewardSent",
+        },
+      },
+    ],
+  },
+};
+
 // Can expand the Datasource processor types via the genreic param
 const project: SubstrateProject = {
   specVersion: "1.0.0",
@@ -50,211 +257,8 @@ const project: SubstrateProject = {
     // dictionary: "https://api.subquery.network/sq/subquery/dictionary-polkadot",
   },
   dataSources: [
-    {
-      kind: SubstrateDatasourceKind.Runtime,
-      startBlock: 3149629,
-      mapping: {
-        file: "./dist/index.js",
-        handlers: [
-          /*{
-            kind: SubstrateHandlerKind.Block,
-            handler: "handleBlock",
-            filter: {
-              modulo: 100,
-            },
-          },*/
-          /*{
-            kind: SubstrateHandlerKind.Call,
-            handler: "handleCall",
-            filter: {
-              module: "balances",
-            },
-          },*/
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleTransferEvent",
-            filter: {
-              module: "balances",
-              method: "Transfer",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleJobRegistrationStoredEvent",
-            filter: {
-              module: "acurast",
-              method: "JobRegistrationStored",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleAllowedSourcesUpdatedEvent",
-            filter: {
-              module: "acurast",
-              method: "AllowedSourcesUpdated",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleJobRegistrationRemovedEvent",
-            filter: {
-              module: "acurast",
-              method: "JobRegistrationRemoved",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleAttestationStoredEvent",
-            filter: {
-              module: "acurast",
-              method: "AttestationStored",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleAdvertisementStoredEvent",
-            filter: {
-              module: "acurastMarketplace",
-              method: "AdvertisementStored",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleAdvertisementRemovedEvent",
-            filter: {
-              module: "acurastMarketplace",
-              method: "handleAdvertisementRemovedEvent",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleMatchedEvents",
-            filter: {
-              module: "acurastMarketplace",
-              method: "JobRegistrationMatched",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleMatchedEvents",
-            filter: {
-              module: "acurastMarketplace",
-              method: "JobExecutionMatched",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleJobRegistrationAssignedEvent",
-            filter: {
-              module: "acurastMarketplace",
-              method: "JobRegistrationAssigned",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleReportedEvent",
-            filter: {
-              module: "acurastMarketplace",
-              method: "Reported",
-            },
-          },
-          // this events are currently not processed since we derive execution result from extrinsic actual parameters upon a `acurastMarketplace.Reported` event
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleExecutionSuccessEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "ExecutionSuccess",
-          //     },
-          //   },
-          //   {
-          //     kind: SubstrateHandlerKind.Event,
-          //     handler: "handleExecutionFailureEvent",
-          //     filter: {
-          //       module: "acurastMarketplace",
-          //       method: "ExecutionFailure",
-          //     },
-          //   },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleJobFinalizedEvent",
-            filter: {
-              module: "acurastMarketplace",
-              method: "JobFinalized",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorAdvertisementEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorAdvertisement",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorHeartbeatEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorHeartbeat",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorHeartbeatWithVersionEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorHeartbeatWithVersion",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleManagerCreatedEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ManagerCreated",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorPairedEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorPaired",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorPairingsUpdatedEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorPairingsUpdated",
-            },
-          },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleProcessorRewardSentEvent",
-            filter: {
-              module: "acurastProcessorManager",
-              method: "ProcessorRewardSent",
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: SubstrateDatasourceKind.Runtime,
-      startBlock: 3149629,
-      mapping: {
-        file: "./dist/index.js",
-        handlers: [
-          {
-            kind: SubstrateHandlerKind.Call,
-            handler: "handleCall",
-          },
-        ],
-      },
-    },
+    ...(process.env.RAW_DATA_ENABLED ?? false ? [rawHandlers] : []),
+    ...(process.env.PURIFY_DATA_ENABLED ?? true ? [purifyHandlers] : []),
   ],
 };
 

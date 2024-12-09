@@ -32,13 +32,16 @@ spec:
       containers:
         - name: processor
           image: __TO_BE_REPLACED_BY_IMAGE_TAG__
-          command: ["yarn", "start"]
+          command: ["yarn", "start-purify-processor"]
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: processor-config-map
             - secretRef:
                 name: processor-secret
+          env:
+            - name: PURIFY_DATA_START_BLOCK
+              value: 3149629
           readinessProbe:
             httpGet:
               path: /metrics
